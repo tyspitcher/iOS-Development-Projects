@@ -1,8 +1,11 @@
 import UIKit
 
-// this extension
+// this extension turns time interval of minutes and second to total
+// seconds in order to be able to cleanly add all durations
+// in a playlist
 extension TimeInterval {
-      static func minutes(_ m: Int, _ s: Int = 0) -> TimeInterval { TimeInterval(m * 60 + s) }
+      static func minutes(_ m: Int, _ s: Int = 0) -> TimeInterval {
+          TimeInterval(m * 60 + s) }
   }
 
 struct Song {
@@ -52,7 +55,7 @@ class Playlist {
     var count: Int {
         songs.count
     }
-    func showAllSongs() -> [Song] {
+    func allSongs() -> [Song] {
         songs
     }
     func currentSong() -> Song? {
@@ -91,8 +94,12 @@ class Playlist {
         songs.shuffle()
     }
     
-    func totalDuration() {
-        
+    func totalDuration() -> Double {
+        var total: Double = 0
+        for song in songs {
+            total += song.duration
+        }
+        return total
     }
 }
 // *** Playlists ***
@@ -264,7 +271,8 @@ let endOfSummer = Song(
     duration: .minutes(3, 12)
 )
 
-// adding songs to playlists and testing
+// *** Adding songs to playlists and testing the
+// count var and the add and clear func
 
 beatlesDeepCuts.add(hideYourLoveAway)
 beatlesDeepCuts.add(sheCameIn)
@@ -273,12 +281,16 @@ beatlesDeepCuts.clear()
 beatlesDeepCuts.add(iveGotAFeeling)
 beatlesDeepCuts.add(forNoOne)
 print(beatlesDeepCuts.count)
-// loop prints just the titles in playlist
+
+// loop prints just the titles only from playlist
 for song in beatlesDeepCuts.songs {
     print(song.title)
 }
 print()
-print(beatlesDeepCuts.showAllSongs())
+
+// testing allSongs and totalDuration func
+print(beatlesDeepCuts.allSongs())
+print(beatlesDeepCuts.totalDuration())
 print()
 
 tameImpalaFavs.add(breatheDeeper)
@@ -294,6 +306,8 @@ for song in tameImpalaFavs.songs {
 }
 print()
 
+// testing remove func and using loop to print
+// out a string with song info
 tameImpalaFavs.remove(at: 2)
 
 print(tameImpalaFavs.count)
@@ -302,6 +316,8 @@ for song in tameImpalaFavs.songs {
 }
 print()
 
+// adding songs to pastPresent playlist and testing
+// the shuffle func
 pastPresent.add(aDayInTheLife)
 pastPresent.add(patience)
 pastPresent.add(yellowSubmarine)
@@ -318,13 +334,58 @@ for song in pastPresent.songs {
     print("\(song.title)")
 }
 print()
-print(pastPresent.currentlyPlaying)
-pastPresent.playNext()
-print()
-print(pastPresent.currentlyPlaying)
-pastPresent.playNext()
-print()
-print(pastPresent.currentlyPlaying)
 
+// testing the playNext, currentlySong, and playPrevious
+// and play(at index: ) funcs, using if let to unwrap my optional currentlyPlaying to avoid warning
+// and give an output if value is nil
+// printing out initial value and then value after it
+// changes to make sure value changes
+if let song = pastPresent.currentlyPlaying {
+    print("\(song)")
+} else {
+    print("Nothing is currently playing")
+}
+print()
+
+pastPresent.playHere(at: 4)
+if let song = pastPresent.currentlyPlaying {
+    print("\(song)")
+} else {
+    print("Nothing is currently playing")
+}
+
+pastPresent.playNext()
+print()
+
+if let song = pastPresent.currentlyPlaying {
+    print("\(song)")
+} else {
+    print("Nothing is currently playing")
+}
+print()
+
+pastPresent.currentSong()
+if let song = pastPresent.currentlyPlaying {
+    print("\(song)")
+} else {
+    print("Nothing is currently playing")
+}
+
+pastPresent.playNext()
+print()
+
+if let song = pastPresent.currentlyPlaying {
+    print("\(song)")
+} else {
+    print("Nothing is currently playing")
+}
+pastPresent.playPrevious()
+print()
+
+if let song = pastPresent.currentlyPlaying {
+    print("\(song)")
+} else {
+    print("Nothing is currently playing")
+}
 //fatalError("Invalid Input")
 

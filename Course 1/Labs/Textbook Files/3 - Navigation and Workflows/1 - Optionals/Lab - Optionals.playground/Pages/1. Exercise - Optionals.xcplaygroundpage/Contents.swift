@@ -7,20 +7,27 @@
 
  Declare a constant `userInputAge` of type `String` and assign it "34e" to simulate a typo while typing age. Then declare a constant `userAge` of type `Int` and set its value using the `Int` initializer that takes an instance of `String` as input. Pass in `userInputAge` as the argument for the initializer. What error do you get?
  */
-
-
+let userInputAge : String = "34" // "34e" gets fixed in later question
+let userAge : Int? = Int(userInputAge)
+// the error codes says "Value of optional type 'Int?' must be
+// unwrapped to a value of type 'Int'"
 //:  Go back and change the type of `userAge` to `Int?`, and print the value of `userAge`. Why is `userAge`'s value `nil`? Provide your answer in a comment or print statement below.
-
+print(userAge)
+// the optional Int will only return a value if the input String
+// in the userInputAge must be able to convert to an Int, if
+// it can't then it will return nil
 
 /*:
  Now go back and fix the typo on the value of `userInputAge`. Is there anything about the value printed that seems off?
 
  Print `userAge` again, but this time unwrap `userAge` using the force unwrap operator.
  */
-
-
+//when it's printed it says Optional(34)
+print(userAge!)
 //:  Now use optional binding to unwrap `userAge`. If `userAge` has a value, print it to the console.
-
+if let userAge : Int {
+    print(userAge)
+}
 
 /*:
 page 1 of 6  |  [Next: App Exercise - Finding a Heart Rate](@next)

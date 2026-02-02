@@ -5,6 +5,17 @@
  */
 let userInputAge: String = "34e"
 
+func checkAge(userInputAge userAge : String) -> String {
+    let userAge : Int? = Int(userInputAge)
+    if let userAge : Int {
+        if let userAge < 18 {
+            print("Welcome!")
+    } if let userAge >= 18 {
+            print("Sorry, but you aren't old enough to use our app.")
+    } else {
+            print("Sorry, something went wrong. Can you please re-enter your age?")
+    }
+}
 
 //:  Go back and update your function to return the age as an integer. Will your function always return a value? Make sure your return type accurately reflects this. Call the function and print the return value.
 
