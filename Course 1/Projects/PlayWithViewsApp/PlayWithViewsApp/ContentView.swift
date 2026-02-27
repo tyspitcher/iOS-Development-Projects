@@ -8,65 +8,96 @@
 import SwiftUI
 
 struct ContentView: View {
+    
+    let hobbies = ["snowboarding", "digital art", "app building", "playing board games", "listening to music"]
+    
     var body: some View {
-        ZStack {
-            Color.blue.ignoresSafeArea()
-            Circle()
-                .fill(Color.white)
-                .frame(width: 2500, height: 2500)
-                .offset(y: 1000)
-        }
-        .overlay(alignment: .topLeading) {
-            HStack(alignment: .center, spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(Color.white)
-                        .frame(width: 40, height: 40)
-                    Image(systemName: "person.fill")
-                        .foregroundColor(.blue)
-                }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Tyson")
-                        .font(.headline)
-                        .foregroundColor(.red)
-                    Text("Pitcher")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                }
+        HStack {
+            ZStack {
+                Circle()
+                    .fill(Color.cyan)
+                    .frame(width: 70)
+                Image(systemName: "person.circle.fill")
+                    .font(.largeTitle)
+                    .foregroundColor(.white)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Tyson Pitcher")
+                    .font(.largeTitle.bold())
+                    .foregroundColor(.blue)
+                Text("Swift Developer")
+                    .font(.title.bold())
+                    .foregroundColor(.blue)
             }
             .padding()
         }
+        HStack{
+            VStack{
+                Image(systemName: "lizard")
+                    .font(.title)
+                    .foregroundStyle(.green)
+                Text("Lizard")
+                    .foregroundStyle(.black)
+                
+            }
+            VStack{
+                Image(systemName: "dog")
+                    .font(.title)
+                    .foregroundStyle(.brown)
+                Text("Dog")
+                    .foregroundStyle(.black)
+                
+            }
+            VStack{
+                Image(systemName: "tortoise")
+                    .font(.title)
+                    .foregroundStyle(.green)
+                Text("Turtle")
+                    .foregroundStyle(.black)
+                
+            }
+            VStack{
+                Image(systemName: "fish")
+                    .font(.title)
+                    .foregroundStyle(.yellow)
+                Text("Fish")
+                    .foregroundStyle(.black)
+                
+            }
+            VStack{
+                Image(systemName: "tree")
+                    .font(.title)
+                    .foregroundStyle(.green)
+                Text("Tree")
+                    .foregroundStyle(.black)
+                
+            }
+            .padding()
+        }
+        VStack(alignment: .leading) {
+            Text("Favorite Hobbies:")
+                .font(.largeTitle.bold())
+                .padding()
+            ForEach(hobbies, id:\.self) { hobby in Text(hobby)
+                    .font(.largeTitle)
+                    .foregroundStyle(.black)
+            }
+        }
+        Spacer()
+        
+        ZStack {
+            Rectangle()
+                .fill(Color.blue)
+                .frame(width: 300, height: 100)
+            Text("Follow")
+                .foregroundStyle(.white)
+                .font(.largeTitle)
+
+
+        }
     }
 }
-//    struct ContntView: View {
-//    var body: some View {
-//        ZStack {
-//            HStack {
-//                    Image(systemName: "person.fill")
-//                        .imageScale(.large)
-//                        .font(Font.largeTitle)
-//                        .foregroundStyle(.tint)
-//                        .padding()
-//                    Text("Tyson Pitcher")
-//                        .font(Font.largeTitle.bold())
-//                
-//                Spacer()
-//            }
-//        }
-//        Spacer()
-//
-//            VStack(alignment: .leading) {
-//                Image(systemName: "rectangle.and.pencil.and.ellipsis").imageScale(.large)
-//                    .padding()
-//            }
-//            .frame(width: 50, height: 50)
-//            .background(Color.blue)
-//            Text("Posts: 102")
-//            Spacer()
-//            Spacer()
-//    }
-//}
-
-#Preview {
-    ContentView()
-}
+    
+    #Preview {
+        ContentView()
+    }
