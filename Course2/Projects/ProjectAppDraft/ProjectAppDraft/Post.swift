@@ -5,7 +5,6 @@
 //  Created by Tyson Pitcher on 4/8/26.
 //
 import Foundation
-import SwiftUI
 import Observation
 
 // creating format for a post

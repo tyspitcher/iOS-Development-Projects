@@ -6,9 +6,6 @@
 //
 import SwiftUI
 import Foundation
-import Observation
-
-import SwiftUI
 
 struct EditProfileView: View {
     @State var viewModel: EditProfileViewModel

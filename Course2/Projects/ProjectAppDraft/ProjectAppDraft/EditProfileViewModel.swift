@@ -5,12 +5,11 @@
 //  Created by Tyson Pitcher on 4/1/26.
 //
 import Foundation
-import SwiftUI
 import Observation
 
 // protocol that this VM can use, change later to implement real API calls
 protocol UserProfileService {
-    func updateProfile(_ profile: UserProfile) async throws -> UserProfile
+    func updateProfile(_ profile: User) async throws -> User
 }
 
 // creating editable struct to avoid mutating the domain model until user
@@ -24,7 +23,7 @@ struct EditableUserProfile: Equatable {
     var profileImage: String?
     var backgroundImage: String?
     
-    init(from profile: UserProfile) {
+    init(from profile: User) {
         self.firstName = profile.firstName
         self.lastName = profile.lastName
         self.userName = profile.userName
@@ -42,7 +41,7 @@ struct EditableUserProfile: Equatable {
         }
     }
     
-    func applying(to profile: UserProfile) -> UserProfile {
+    func applying(to profile: User) -> User {
         var updated = profile
         updated.firstName = firstName
         updated.lastName = lastName
@@ -62,7 +61,7 @@ struct EditableUserProfile: Equatable {
 
 // temporary dummy data for previews and testing
 struct MockUserProfileService: UserProfileService {
-    func updateProfile(_ profile: UserProfile) async throws -> UserProfile {
+    func updateProfile(_ profile: User) async throws -> User {
         try await Task.sleep(nanoseconds: 400_000_000) // simulate latency
         return profile // echo back
     }
@@ -77,14 +76,14 @@ class EditProfileViewModel {
     var errorMessage: String?
     
     // dependencies
-    private let original: UserProfile
+    private let original: User
     private let service: UserProfileService
-    private let onSave: (UserProfile) -> Void
+    private let onSave: (User) -> Void
     
     init(
-        user: UserProfile,
+        user: User,
         service: UserProfileService = MockUserProfileService(),
-        onSave: @escaping (UserProfile) -> Void
+        onSave: @escaping (User) -> Void
     ) {
         self.original = user
         self.form = EditableUserProfile(from: user)
@@ -97,7 +96,6 @@ class EditProfileViewModel {
     func save() async {
         if isSaving { return }
         isSaving = true
-        defer { isSaving = false }
 
         let updated = form.applying(to: original)
         do {

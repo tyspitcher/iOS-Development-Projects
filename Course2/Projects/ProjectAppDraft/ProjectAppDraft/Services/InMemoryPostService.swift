@@ -4,10 +4,9 @@
 //
 //  Created by Tyson Pitcher on 4/8/26.
 //
-
 import Foundation
 
-final class InMemoryPostService: PostService {
+class InMemoryPostService: PostService {
     private var posts: [Post]
     private var commentsByPost: [UUID: [Comment]]
     private var likesByPost: [UUID: Set<UUID>] // postID -> set of userIDs who liked
@@ -22,10 +21,11 @@ final class InMemoryPostService: PostService {
         self.likesByPost = seedLikes
     }
 
-    // posts
+    // adding posts
     func fetchTimeline() async throws -> [Post] {
         posts
     }
+    // fetchPosts unused now, but will be ready for API
     func fetchPosts(for authorID: UUID) async throws -> [Post] {
         posts.filter { $0.authorID == authorID }
     }
@@ -34,7 +34,7 @@ final class InMemoryPostService: PostService {
         return post
     }
 
-    // comments
+    // adding comments
     func fetchComments(for postID: UUID) async throws -> [Comment] {
         commentsByPost[postID] ?? []
     }
@@ -46,7 +46,7 @@ final class InMemoryPostService: PostService {
         commentsByPost[postID]?.count ?? 0
     }
 
-    // likes
+    // managing likes
     func likeCount(for postID: UUID) async throws -> Int {
         likesByPost[postID]?.count ?? 0
     }

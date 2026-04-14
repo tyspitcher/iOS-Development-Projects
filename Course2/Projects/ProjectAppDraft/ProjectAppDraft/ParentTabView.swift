@@ -4,53 +4,56 @@
 //
 //  Created by Tyson Pitcher on 4/7/26.
 //
-
 import SwiftUI
+import Foundation
 
 struct ParentTabView: View {
-    private let user = tyson
-
-    // Hold the shared service as a simple constant
-    private let postService: InMemoryPostService
-
-    // View models initialized in init()
-    @State private var userProfileViewModel: UserProfileViewModel
-    @State private var timelineViewModel: TimelineViewModel
-
-    init() {
-        let service = InMemoryPostService(seedPosts: userPosts)
-        self.postService = service
-
-        _userProfileViewModel = State(initialValue: UserProfileViewModel(user: tyson))
-        _timelineViewModel = State(initialValue: TimelineViewModel(postService: service))
-    }
-
+    @State var viewModel: ParentTabViewModel
+    
     var body: some View {
-        VStack {
+        VStack(alignment: .leading) {
             HStack {
                 Image("logo")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 150)
-                    .padding(.horizontal, 30)
+                    .frame(width: 165)
+                
                 Spacer()
             }
+            Text("Space for Humans in The Loop")
+                .italic()
+                .font(.title3)
+                .bold()
         }
-
-        TabView {
-            UserProfileView(viewModel: userProfileViewModel, user: user)
-                .tabItem {
-                    Label("Profile", systemImage: "person.crop.circle")
+        .padding(.horizontal, 30)
+        NavigationStack {
+            TabView {
+                UserProfileView(viewModel: viewModel.userProfileViewModel)
+                    .tabItem { Label("Profile", systemImage: "person.crop.circle") }
+                
+                TimelineView(viewModel: viewModel.timelineViewModel, currentUserID: viewModel.user.id)
+                    .tabItem { Label("Timeline", systemImage: "list.bullet.rectangle") }
+                
+            }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        viewModel.presentNewPost()
+                    } label: {
+                        Label("New Post", systemImage: "square.and.pencil")
+                    }
                 }
-
-            TimelineView(viewModel: timelineViewModel, currentUserID: user.id)
-                .tabItem {
-                    Label("Timeline", systemImage: "calendar.day.timeline.left")
+            }
+            
+            .sheet(isPresented: $viewModel.isPresentingNewPost) {
+                NewPostView(viewModel: viewModel.newPostViewModel) {
+                    viewModel.dismissNewPost()
                 }
+            }
         }
     }
 }
 
 #Preview {
-    ParentTabView()
+    ParentTabView(viewModel: ParentTabViewModel(user: tyson))
 }

@@ -48,26 +48,26 @@ The overall layout and styling of your app is primarily up to you. That said, yo
 ## Tech Social Media App Requirements
 
 #### Major Views
-1. A Tab parent view.
-1. A **user profile page** tab.
+1. ✅A Tab parent view.
+1. ✅A **user profile page** tab.
     ✅- This screen should show the **currently logged in user**.
     ✅- It should show a **profile photo** and a **background (cover) photo** at the top of the screen.
     ✅- It should show the user's **first name, last name, username, bio, and tech interests**. Since this app is designed for Tech Industry workers, the tech interests is a place for them to specifically list the topics that they are interested in.
     ✅- It should have **at least one post** (representing the most recent user post) under the user details.
 1. ✅A second tab where a **timeline of posts** are displayed.
-    - This screen displays all users' posts on the services, including your own posts and everyone else's. 
-    - Show at least **one post from your user** and **one post from another user**.
-    - The post should display the **number of likes and comments**. The number of comments should be tappable to display the comments listed on the post; this should transition the user to a **new view where users can see the list of comments**. 
-        - Make sure you have at least one post with placeholder comments on it so that the comment UI can be seen.
-    - These posts should use UI that is extensible down the road to show as many posts as are retrieved from the API. (In other words, make sure you are using **reusable, automatically generated views**.)
+    ✅- This screen displays all users' posts on the services, including your own posts and everyone else's. 
+    ✅- Show at least **one post from your user** and **one post from another user**.
+    ✅- The post should display the **number of likes and comments**. The number of comments should be tappable to display the comments listed on the post; this should transition the user to a **new view where users can see the list of comments**. 
+       ✅ - Make sure you have at least one post with placeholder comments on it so that the comment UI can be seen.
+    ✅- These posts should use UI that is extensible down the road to show as many posts as are retrieved from the API. (In other words, make sure you are using **reusable, automatically generated views**.)
 
 #### Child Views
 7. ✅The User Profile tab should include a button that pops up a **modal sheet for editing their profile information**.
     ✅- This sheet should include the **appropriate fields** for updating this data, and a **save button** that dismisses the view when finished.
     ✅- This sheet does not need to actually function, since updating the user's profile data will not be done locally but instead will trigger an API call.
-1. The Posts tab should include a button that presents **a sheet view for making a new post**.
-    - Should include a field for the title and body of the post.
-    - Should include a **button that submits** the post and dismisses the view. Like before, this does not need to make any changes to your app since no API calls are implemented yet.
+✅1. The Posts tab should include a button that presents **a sheet view for making a new post**.
+    ✅- Should include a field for the title and body of the post.
+    ✅- Should include a **button that submits** the post and dismisses the view. Like before, this does not need to make any changes to your app since no API calls are implemented yet.
 
 #### Black Diamond
 9. Include an Edit Post button and functionality. The specific implementation is up to you.

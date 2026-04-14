@@ -4,10 +4,10 @@
 //
 //  Created by Tyson Pitcher on 4/8/26.
 //
-
 import Foundation
 
 protocol PostService {
+    
     // posts
     func fetchTimeline() async throws -> [Post]
     func fetchPosts(for authorID: UUID) async throws -> [Post]
