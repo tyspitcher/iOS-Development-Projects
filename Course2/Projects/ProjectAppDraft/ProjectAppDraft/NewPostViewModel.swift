@@ -8,7 +8,7 @@ import Foundation
 import Observation
 
 @Observable
-final class NewPostViewModel {
+class NewPostViewModel {
     // inputs
     var title: String = ""
     var body: String = ""

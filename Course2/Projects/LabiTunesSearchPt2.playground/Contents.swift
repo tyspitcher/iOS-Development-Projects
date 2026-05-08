@@ -1,6 +1,6 @@
 
-import UIKit
-
+import SwiftUI
+import Foundation
 //              *****    iTunes Search (Part 2)    *****
 
 // makes JSON look better in the console

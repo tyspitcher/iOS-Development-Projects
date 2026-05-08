@@ -8,7 +8,7 @@ import Foundation
 import Observation
 
 @Observable
-final class ParentTabViewModel {
+class ParentTabViewModel {
     var user: User
     var isPresentingNewPost = false
     let postService: PostService
