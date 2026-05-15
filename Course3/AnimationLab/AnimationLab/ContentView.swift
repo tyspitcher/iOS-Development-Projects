@@ -6,42 +6,29 @@
 //
 
 import SwiftUI
-enum Countdown {
-    case three, two, one, go
+enum MakeGroup {
+    case three, two, one
 
     var image: Image {
         switch self {
         case .three:
-            return Image(systemName: "3.circle.fill")
+            return Image(systemName: "person.fill")
         case .two:
-            return Image(systemName: "2.circle.fill")
+            return Image(systemName: "person.2.fill")
         case .one:
-            return Image(systemName: "1.circle.fill")
-        case .go:
-            return Image("go")
-        }
-    }
-
-    var color: Color {
-        switch self {
-        case .three:
-            return .black
-        case .two:
-            return .red
-        case .one:
-            return .yellow
-        case .go:
-            return .green
+            return Image(systemName: "person.3.fill")
         }
     }
 }
 
 struct ContentView: View {
-    @State var currentCountdown: Countdown = .three
+    @State var currentCountdown: MakeGroup = .three
     @State var shrinkImage = false
     @State var fadeImage = false
+    @Namespace var animation
     
     var body: some View {
+        
         VStack {
             Spacer()
             currentCountdown.image
@@ -49,26 +36,28 @@ struct ContentView: View {
                 .frame(width: 400, height: 400)
                 .scaleEffect(shrinkImage ? 0.1 : 1)
                 .opacity(fadeImage ? 1.0 : 0)
-                .foregroundStyle(currentCountdown.color)
+                .foregroundStyle(.black)
                 .animation(.linear(duration: 0.5), value: shrinkImage)
                 .animation(.linear(duration: 0.5), value: fadeImage)
                 .padding()
             Spacer()
             
-            Button("Start Game") {
+            Button("Make Group") {
                 startCountdown()
             }
             .font(.title)
         }
         .padding()
     }
+    
     func startCountdown() {
         currentCountdown = .three
         shrinkImage = false
         fadeImage = false
         animate(countdown: .three)
     }
-    private func animate(countdown: Countdown) {
+    
+    private func animate(countdown: MakeGroup) {
         var transaction = Transaction()
         transaction.disablesAnimations = true
 
@@ -82,7 +71,7 @@ struct ContentView: View {
             fadeImage = true
             shrinkImage = true
         } completion: {
-            if countdown == .go {
+            if countdown == .one {
                 fadeImage = true
                 return
             }
@@ -97,13 +86,11 @@ struct ContentView: View {
         }
     }
 
-    
-    private func nextCountdown(after countdown: Countdown) -> Countdown? {
+    private func nextCountdown(after countdown: MakeGroup) -> MakeGroup? {
         switch countdown {
         case .three: return .two
         case .two: return .one
-        case .one: return .go
-        case .go: return nil
+        case .one: return nil
         }
     }
 }
