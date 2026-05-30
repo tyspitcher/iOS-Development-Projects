@@ -59,6 +59,20 @@ final class SupabaseAuthService {
         try await client.requestVoid(path: "/auth/v1/logout", method: .post, useAuth: true)
     }
 
+    func requestPasswordReset(email: String) async throws {
+        struct RecoverRequest: Encodable {
+            let email: String
+        }
+
+        try await client.requestVoid(
+            path: "/auth/v1/recover",
+            method: .post,
+            queryItems: [URLQueryItem(name: "redirect_to", value: "threadshare://auth-callback")],
+            body: try JSONEncoder.threadShareSupabase.encode(RecoverRequest(email: email)),
+            useAuth: false
+        )
+    }
+
     func bootstrapProfile(profile: UserProfile, email: String, session: SupabaseSession) async throws {
         let row = SupabaseProfileRow(
             id: profile.id,
@@ -72,6 +86,7 @@ final class SupabaseAuthService {
             visibility: profile.visibility.rawValue,
             style_interests: profile.styleInterests,
             favorite_brands: profile.favoriteBrands,
+            color_palette_preference_ids: profile.colorPalettePreferenceIDs,
             follower_count: profile.followerCount,
             following_count: profile.followingCount,
             created_at: Date(),

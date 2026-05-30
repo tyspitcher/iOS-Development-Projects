@@ -42,14 +42,45 @@ struct FriendListViewModel {
         appState.visibleFriendRequests(on: profile)
     }
 
-    func relationshipActionTitle(for user: UserProfile) -> String {
-        if user.relationship == .friend {
+    func connectionState(for user: UserProfile) -> FriendConnectionState {
+        appState.friendConnectionState(for: user.id)
+    }
+
+    func statusTitle(for user: UserProfile) -> String {
+        switch connectionState(for: user) {
+        case .addFriend:
+            return "Add Friend"
+        case .requested:
+            return "Requested"
+        case .incomingRequest:
+            return "Incoming Request"
+        case .friends:
             return "Friends"
-        } else if appState.hasSentFriendRequest(to: user.id) {
-            return "Request Sent"
-        } else if appState.hasIncomingFriendRequest(from: user.id) {
-            return "Respond"
-        } else {
+        }
+    }
+
+    func statusIcon(for user: UserProfile) -> String {
+        switch connectionState(for: user) {
+        case .addFriend:
+            return "person.badge.plus"
+        case .requested:
+            return "clock.fill"
+        case .incomingRequest:
+            return "tray.fill"
+        case .friends:
+            return "person.2.fill"
+        }
+    }
+
+    func relationshipActionTitle(for user: UserProfile) -> String {
+        switch connectionState(for: user) {
+        case .friends:
+            return "Friends"
+        case .requested:
+            return "Requested"
+        case .incomingRequest:
+            return "Incoming Request"
+        case .addFriend:
             return "Request Friend"
         }
     }

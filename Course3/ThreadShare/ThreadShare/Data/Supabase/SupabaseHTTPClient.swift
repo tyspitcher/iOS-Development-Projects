@@ -13,6 +13,24 @@ enum SupabaseHTTPClientError: Error {
     case badStatusCode(Int, Data)
 }
 
+extension SupabaseHTTPClientError: LocalizedError {
+    var errorDescription: String? {
+        switch self {
+        case .invalidURL:
+            return "The Supabase request URL was invalid."
+        case .invalidResponse:
+            return "Supabase returned an invalid response."
+        case let .badStatusCode(statusCode, data):
+            let responseMessage = String(data: data, encoding: .utf8)?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if let responseMessage, responseMessage.isEmpty == false {
+                return "Supabase returned \(statusCode): \(responseMessage)"
+            }
+            return "Supabase returned \(statusCode)."
+        }
+    }
+}
+
 final class SupabaseHTTPClient {
     enum HTTPMethod: String {
         case get = "GET"
@@ -65,9 +83,19 @@ final class SupabaseHTTPClient {
         method: HTTPMethod,
         queryItems: [URLQueryItem] = [],
         body: Data? = nil,
-        useAuth: Bool = true
+        useAuth: Bool = true,
+        includePreferHeader: Bool = true,
+        additionalHeaders: [String: String] = [:]
     ) async throws {
-        _ = try await requestData(path: path, method: method, queryItems: queryItems, body: body, useAuth: useAuth)
+        _ = try await requestData(
+            path: path,
+            method: method,
+            queryItems: queryItems,
+            body: body,
+            useAuth: useAuth,
+            includePreferHeader: includePreferHeader,
+            additionalHeaders: additionalHeaders
+        )
     }
 
     private func requestData(
@@ -75,7 +103,9 @@ final class SupabaseHTTPClient {
         method: HTTPMethod,
         queryItems: [URLQueryItem],
         body: Data?,
-        useAuth: Bool
+        useAuth: Bool,
+        includePreferHeader: Bool = true,
+        additionalHeaders: [String: String] = [:]
     ) async throws -> Data {
         guard var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false) else {
             throw SupabaseHTTPClientError.invalidURL
@@ -89,12 +119,13 @@ final class SupabaseHTTPClient {
         request.httpBody = body
 
         var headers = SupabaseConfig.publicHeaders
-        if body != nil {
+        if body != nil && includePreferHeader {
             headers["Prefer"] = "return=representation"
         }
         if useAuth, let accessToken = sessionProvider?.session?.accessToken {
             headers["Authorization"] = "Bearer \(accessToken)"
         }
+        additionalHeaders.forEach { headers[$0] = $1 }
         headers.forEach { request.setValue($1, forHTTPHeaderField: $0) }
 
         let (data, response) = try await session.data(for: request)

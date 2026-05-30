@@ -10,6 +10,8 @@ import SwiftUI
 @main
 struct ThreadShareApp: App {
     @StateObject private var sessionStore = SupabaseSessionStore()
+    @StateObject private var pushPermissionManager = PushNotificationPermissionManager()
+    @UIApplicationDelegateAdaptor(ThreadShareAppDelegate.self) private var appDelegate
 
     init() {
         ThreadShareFontRegistrar.registerFonts()
@@ -19,6 +21,7 @@ struct ThreadShareApp: App {
         WindowGroup {
             ThreadShareRootView()
                 .environmentObject(sessionStore)
+                .environmentObject(pushPermissionManager)
         }
     }
 }

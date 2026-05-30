@@ -7,28 +7,6 @@
 
 import Foundation
 
-enum OnboardingStylePreference: String, CaseIterable, Codable, Identifiable {
-    case quietLuxury
-    case sportPreppy
-    case streetwear
-    case romantic
-    case classicMinimal
-    case eclecticVintage
-
-    var id: String { rawValue }
-
-    var displayName: String {
-        switch self {
-        case .quietLuxury: "Quiet Luxury"
-        case .sportPreppy: "Sport / Preppy"
-        case .streetwear: "Streetwear"
-        case .romantic: "Romantic"
-        case .classicMinimal: "Classic / Minimal"
-        case .eclecticVintage: "Eclectic / Vintage"
-        }
-    }
-}
-
 enum OnboardingUsageGoal: String, CaseIterable, Codable, Identifiable {
     case wardrobeInspo
     case fashionTrends
@@ -52,21 +30,46 @@ enum OnboardingUsageGoal: String, CaseIterable, Codable, Identifiable {
 struct OnboardingQuestionnaireDraft: Codable, Hashable {
     var userID: UUID
     var email: String
-    var preferredStyles: [OnboardingStylePreference]
+    var preferredStyleIDs: [FashionStyle.ID]
     var favoriteBrands: [String]
+    var preferredColorPaletteIDs: [FashionColorPalette.ID]
     var usageGoals: [OnboardingUsageGoal]
 
     init(
         userID: UUID,
         email: String,
-        preferredStyles: [OnboardingStylePreference] = [],
+        preferredStyleIDs: [FashionStyle.ID] = [],
         favoriteBrands: [String] = [],
+        preferredColorPaletteIDs: [FashionColorPalette.ID] = [],
         usageGoals: [OnboardingUsageGoal] = []
     ) {
         self.userID = userID
         self.email = email
-        self.preferredStyles = preferredStyles
+        self.preferredStyleIDs = preferredStyleIDs
         self.favoriteBrands = favoriteBrands
+        self.preferredColorPaletteIDs = preferredColorPaletteIDs
         self.usageGoals = usageGoals
+    }
+}
+
+extension OnboardingQuestionnaireDraft {
+    var fashionPreferenceSelection: FashionPreferenceSelection {
+        FashionPreferenceSelection(
+            styleIDs: preferredStyleIDs,
+            favoriteBrands: favoriteBrands,
+            colorPaletteIDs: preferredColorPaletteIDs
+        )
+    }
+
+    var preferredStyleDisplayNames: [String] {
+        FashionPreferenceCatalog.displayNames(forStyleIDs: preferredStyleIDs)
+    }
+
+    var preferredColorPaletteDisplayNames: [String] {
+        FashionPreferenceCatalog.colorPaletteDisplayNames(for: preferredColorPaletteIDs)
+    }
+
+    var suggestedBrandNamesFromStyles: [String] {
+        FashionPreferenceCatalog.suggestedBrandNames(forStyleIDs: preferredStyleIDs)
     }
 }

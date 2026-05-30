@@ -6,19 +6,16 @@
 //
 
 import Foundation
-import SwiftUI
 import Combine
-import PhotosUI
-#if canImport(UIKit)
-import UIKit
-#endif
+import SwiftUI
+import ImageIO
 
 @MainActor
 final class AddItemViewModel: ObservableObject {
     @Published var input = NewThreadItemInput()
-    @Published var selectedUIImage: UIImage?
     @Published var selectedPhotoData: Data?
     @Published var imageErrorMessage: String?
+    @Published var isSaving = false
 
     init() {
         input.size = ThreadItemSizeCatalog.defaultSize(for: input.category)
@@ -42,31 +39,49 @@ final class AddItemViewModel: ObservableObject {
         }
     }
 
-    func loadSelectedPhoto(from item: PhotosPickerItem) async {
+    func loadSelectedPhoto(from data: Data) {
+        guard let aspectRatio = Self.aspectRatio(for: data) else {
+            imageErrorMessage = "Could not read the selected image. Please try another photo."
+            return
+        }
+
+        if let validationMessage = ThreadItemPhotoPolicy.validationMessage(for: aspectRatio) {
+            selectedPhotoData = nil
+            input.photoAspectRatio = ThreadItemPhotoPolicy.fallbackAspectRatio
+            imageErrorMessage = validationMessage
+            return
+        }
+
+        selectedPhotoData = data
+        input.photoAspectRatio = aspectRatio
+        imageErrorMessage = nil
+    }
+
+    func save(in appState: AppState) async -> ThreadItem? {
+        guard canSave else { return nil }
+        isSaving = true
+        defer { isSaving = false }
+
         do {
-            if let data = try await item.loadTransferable(type: Data.self) {
-                selectedPhotoData = data
-                #if canImport(UIKit)
-                selectedUIImage = UIImage(data: data)
-                #endif
-            }
+            return try await appState.addThreadItem(input, imageData: selectedPhotoData)
         } catch {
-            imageErrorMessage = "Could not load selected image."
+            imageErrorMessage = error.localizedDescription
+            return nil
         }
     }
 
-    func save(in appState: AppState) -> ThreadItem? {
-        guard canSave else { return nil }
-
-        if let selectedPhotoData {
-            do {
-                input.imageName = try ThreadItemImageStore.saveImageData(selectedPhotoData)
-            } catch {
-                imageErrorMessage = error.localizedDescription
-                return nil
-            }
+    private static func aspectRatio(for data: Data) -> Double? {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
+        guard let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any] else {
+            return nil
         }
-
-        return appState.addThreadItem(input)
+        guard
+            let width = properties[kCGImagePropertyPixelWidth] as? CGFloat,
+            let height = properties[kCGImagePropertyPixelHeight] as? CGFloat,
+            width > 0
+        else {
+            return nil
+        }
+        return Double(height / width)
     }
 }

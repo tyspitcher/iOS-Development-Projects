@@ -31,51 +31,108 @@ struct ProfileView: View {
         ProfileViewModel(appState: appState)
     }
 
-    private let columns = [
-        GridItem(.flexible(), spacing: 14),
-        GridItem(.flexible(), spacing: 14)
-    ]
-
     var body: some View {
         NavigationStack {
             ZStack {
                 AppTheme.background.ignoresSafeArea()
 
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 18) {
-                        Text("ThreadShare")
-                            .font(AppTheme.brandFont(size: 40))
-                            .fontWeight(.bold)
-                            .foregroundStyle(AppTheme.ink)
+                GeometryReader { proxy in
+                    let contentWidth = max(0, proxy.size.width - (AppTheme.pagePadding * 2))
 
-                        Text("Profile")
-                            .font(AppTheme.titleFont(size: 26))
-                            .foregroundStyle(AppTheme.ink)
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 18) {
+                            Text("ThreadShare")
+                                .font(AppTheme.brandFont(size: 40))
+                                .fontWeight(.bold)
+                                .foregroundStyle(AppTheme.ink)
 
-                        if let currentUser = viewModel.currentUser {
-                            profileHeader(for: currentUser)
-                            friendRequestSummaryCard
-                            visibilityCard(for: currentUser)
-                            statsCard(for: currentUser)
-                            chipSection(title: "Style Interests", values: currentUser.styleInterests, fallback: ["Campus Casual", "Capsule Closet"])
-                            chipSection(title: "Favorite Brands", values: currentUser.favoriteBrands, fallback: ["Aritzia", "Madewell"])
-                            likedItemsSection
-                            closet(for: currentUser)
-                        } else {
-                            EmptyStateView(
-                                title: "Profile loading",
-                                message: "Your closet and profile details will appear here.",
-                                systemImage: "person.crop.circle"
-                            )
+                            Text("Profile")
+                                .font(AppTheme.titleFont(size: 26))
+                                .foregroundStyle(AppTheme.ink)
+
+                            if let currentUser = viewModel.currentUser {
+                                profileHeader(for: currentUser)
+                                friendRequestSummaryCard
+                                visibilityCard(for: currentUser)
+                                statsCard(for: currentUser)
+                                chipSection(
+                                    title: "Style Interests",
+                                    values: currentUser.styleInterestDisplayNames,
+                                    fallback: FashionPreferenceCatalog.displayNames(
+                                        forStyleIDs: [
+                                            FashionPreferenceCatalog.StyleID.casualEveryday,
+                                            FashionPreferenceCatalog.StyleID.vintage
+                                        ]
+                                    )
+                                )
+                                chipSection(title: "Favorite Brands", values: currentUser.favoriteBrands, fallback: ["Aritzia", "Madewell"])
+                                chipSection(
+                                    title: "Color Palettes",
+                                    values: currentUser.colorPalettePreferenceDisplayNames,
+                                    fallback: ["Soft Neutrals", "Coastal"]
+                                )
+                                likedItemsSection
+                                closet(for: currentUser, availableWidth: contentWidth)
+                            } else {
+                                EmptyStateView(
+                                    title: "Profile loading",
+                                    message: "Your closet and profile details will appear here.",
+                                    systemImage: "person.crop.circle"
+                                )
+                            }
                         }
+                        .padding(AppTheme.pagePadding)
                     }
-                    .padding(AppTheme.pagePadding)
                 }
             }
             .navigationTitle("")
             #if os(iOS)
             .toolbarBackground(AppTheme.background, for: .navigationBar)
             #endif
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink {
+                        NotificationCenterView()
+                            .environmentObject(appState)
+                    } label: {
+                        ZStack(alignment: .topTrailing) {
+                            Image(systemName: "bell")
+                                .font(.system(size: 17, weight: .semibold))
+                                .foregroundStyle(AppTheme.ink)
+                                .frame(width: 34, height: 34)
+                                .background(AppTheme.surface, in: Circle())
+                                .overlay(Circle().stroke(AppTheme.border, lineWidth: 1))
+
+                            if viewModel.unreadNotificationCount > 0 {
+                                Text("\(min(viewModel.unreadNotificationCount, 99))")
+                                    .font(AppTheme.bodyFont(size: 9).weight(.bold))
+                                    .foregroundStyle(.white)
+                                    .frame(minWidth: 16, minHeight: 16)
+                                    .padding(1)
+                                    .background(AppTheme.clay, in: Capsule())
+                                    .offset(x: 4, y: -4)
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Notifications")
+                }
+
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink {
+                        SettingsView()
+                    } label: {
+                        Image(systemName: "gearshape")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(AppTheme.ink)
+                            .frame(width: 34, height: 34)
+                            .background(AppTheme.surface, in: Circle())
+                            .overlay(Circle().stroke(AppTheme.border, lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Settings")
+                }
+            }
             .sheet(item: $activeSheet) { sheet in
                 switch sheet {
                 case .addItem:
@@ -242,7 +299,7 @@ struct ProfileView: View {
         )
     }
 
-    private func closet(for user: UserProfile) -> some View {
+    private func closet(for user: UserProfile, availableWidth: CGFloat) -> some View {
         let closetIsPublic = user.visibility == .publicProfile
         let items = viewModel.closetItems(for: user)
 
@@ -275,16 +332,13 @@ struct ProfileView: View {
                     systemImage: "hanger"
                 )
             } else {
-                LazyVGrid(columns: columns, spacing: 16) {
-                    ForEach(items) { item in
-                        NavigationLink {
-                            ThreadItemDetailView(item: item)
-                        } label: {
-                            ProfileClosetTile(item: item)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
+                ProfileClosetMasonryGrid(
+                    items: items,
+                    spacing: 14,
+                    availableWidth: availableWidth,
+                    columnCount: 2
+                )
+                .frame(height: ProfileClosetMasonryGrid.heightFor(items: items, spacing: 14, availableWidth: availableWidth, columnCount: 2))
             }
         }
     }
@@ -382,39 +436,99 @@ private struct ProfileStat: View {
     }
 }
 
-private struct ProfileClosetTile: View {
-    let item: ThreadItem
+private struct ProfileClosetMasonryGrid: View {
+    let items: [ThreadItem]
+    let spacing: CGFloat
+    let availableWidth: CGFloat
+    let columnCount: Int
+
+    private var tileWidth: CGFloat {
+        let columns = max(columnCount, 1)
+        let totalSpacing = spacing * CGFloat(max(columns - 1, 0))
+        return max(120, (availableWidth - totalSpacing) / CGFloat(columns))
+    }
+
+    static func heightFor(items: [ThreadItem], spacing: CGFloat, availableWidth: CGFloat, columnCount: Int) -> CGFloat {
+        let columns = max(columnCount, 1)
+        let totalSpacing = spacing * CGFloat(max(columns - 1, 0))
+        let tileWidth = max(120, (availableWidth - totalSpacing) / CGFloat(columns))
+        var heights = Array(repeating: CGFloat.zero, count: columns)
+
+        for item in items {
+            guard let targetColumn = heights.enumerated().min(by: { $0.element < $1.element })?.offset else {
+                continue
+            }
+            heights[targetColumn] += tileWidth * ThreadItemImageSizing.heightRatio(for: item) + spacing
+        }
+
+        return max(0, (heights.max() ?? 0) - spacing)
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 9) {
-            TileImageFallback(item: item)
-                .aspectRatio(1 / ThreadItemImageSizing.heightRatio(for: item), contentMode: .fit)
-                .frame(maxWidth: .infinity)
-                .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous))
-
-            Text(item.title)
-                .font(AppTheme.bodyFont(size: 14))
-                .foregroundStyle(AppTheme.ink)
-                .lineLimit(2)
-
-            HStack {
-                Text(item.brand)
-                    .font(AppTheme.bodyFont(size: 12))
-                    .foregroundStyle(AppTheme.mutedInk)
-                    .lineLimit(1)
-
-                Spacer()
-
-                AvailabilityBadge(status: item.availabilityStatus)
+        HStack(alignment: .top, spacing: spacing) {
+            ForEach(0..<max(columnCount, 1), id: \.self) { columnIndex in
+                LazyVStack(spacing: spacing) {
+                    ForEach(columnItems[columnIndex]) { item in
+                        NavigationLink {
+                            ThreadItemDetailView(item: item)
+                        } label: {
+                            ProfileClosetTile(
+                                item: item,
+                                tileWidth: tileWidth
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .frame(width: tileWidth, height: tileWidth * ThreadItemImageSizing.heightRatio(for: item))
+                        .clipped()
+                    }
+                }
+                .frame(width: tileWidth)
             }
         }
-        .padding(8)
-        .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous)
-                .stroke(AppTheme.border, lineWidth: 1)
-        )
-        .shadow(color: AppTheme.softShadow, radius: 12, x: 0, y: 8)
+        .frame(width: availableWidth, alignment: .topLeading)
+    }
+
+    private var columnItems: [[ThreadItem]] {
+        let columns = max(columnCount, 1)
+        var distributed = Array(repeating: [ThreadItem](), count: columns)
+        var heights = Array(repeating: CGFloat.zero, count: columns)
+
+        for item in items {
+            guard let targetColumn = heights.enumerated().min(by: { $0.element < $1.element })?.offset else {
+                continue
+            }
+            distributed[targetColumn].append(item)
+            heights[targetColumn] += tileWidth * ThreadItemImageSizing.heightRatio(for: item) + spacing
+        }
+        return distributed
+    }
+}
+
+private struct ProfileClosetTile: View {
+    let item: ThreadItem
+    let tileWidth: CGFloat
+    private var tileHeight: CGFloat {
+        tileWidth * ThreadItemImageSizing.heightRatio(for: item)
+    }
+    private var tileShape: some Shape {
+        RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous)
+    }
+
+    var body: some View {
+        TileImageFallback(item: item)
+            .frame(width: tileWidth, height: tileHeight)
+            .clipShape(tileShape)
+            .background {
+                tileShape
+                    .fill(AppTheme.surface.opacity(0.001))
+                    .shadow(color: AppTheme.softShadow, radius: 12, x: 0, y: 8)
+            }
+            .overlay(
+                tileShape
+                    .stroke(AppTheme.strongBorder, lineWidth: 1)
+            )
+            .contentShape(tileShape)
+            .accessibilityLabel("\(item.title), tap for details")
     }
 }
 

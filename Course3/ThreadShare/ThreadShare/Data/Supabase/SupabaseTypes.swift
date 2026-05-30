@@ -55,8 +55,11 @@ struct SupabaseProfileRow: Codable {
     var visibility: String
     var style_interests: [String]
     var favorite_brands: [String]
+    var color_palette_preference_ids: [String]
     var follower_count: Int
     var following_count: Int
+    var last_login_at: Date? = nil
+    var last_active_at: Date? = nil
     var created_at: Date?
     var updated_at: Date?
 }
@@ -84,6 +87,10 @@ struct SupabaseThreadItemRow: Codable {
     var updated_at: Date?
 }
 
+struct SupabaseThreadItemImagePathRow: Codable {
+    var image_path: String?
+}
+
 struct SupabaseLikeRow: Codable {
     var id: UUID
     var user_id: UUID
@@ -100,6 +107,7 @@ struct SupabaseBorrowRequestRow: Codable {
     var requested_start_date: String
     var requested_end_date: String
     var message: String
+    var borrower_marked_returned_at: Date?
     var created_at: Date?
     var updated_at: Date?
 }
@@ -128,6 +136,95 @@ struct SupabaseFriendRequestRow: Codable {
     var status: String
     var created_at: Date?
     var responded_at: Date?
+}
+
+struct SupabaseUserBlockRow: Codable {
+    var id: UUID
+    var blocker_id: UUID
+    var blocked_user_id: UUID
+    var created_at: Date?
+}
+
+struct SupabaseItemCommentRow: Codable {
+    var id: UUID
+    var item_id: UUID
+    var author_id: UUID
+    var body: String
+    var created_at: Date?
+}
+
+struct SupabaseAccountDeletionRequestRow: Codable {
+    var id: UUID
+    var user_id: UUID
+    var requested_at: Date
+    var scheduled_deletion_at: Date
+    var canceled_at: Date?
+    var completed_at: Date?
+    var status: String
+    var created_at: Date?
+    var updated_at: Date?
+}
+
+struct SupabaseItemReportRow: Codable {
+    var id: UUID
+    var reporter_id: UUID
+    var item_id: UUID
+    var owner_id: UUID
+    var reason: String
+    var details: String
+    var status: String
+    var created_at: Date?
+}
+
+struct SupabaseNotificationRow: Codable {
+    var id: UUID
+    var recipient_id: UUID
+    var actor_id: UUID?
+    var kind: String
+    var title: String
+    var body: String
+    var item_id: UUID?
+    var borrow_request_id: UUID?
+    var message_id: UUID?
+    var created_at: Date?
+    var read_at: Date?
+}
+
+struct SupabaseNotificationPreferencesRow: Codable {
+    var user_id: UUID
+    var friend_new_item_alerts_enabled: Bool
+    var return_reminder_cadence: String
+    var push_notifications_enabled: Bool
+    var push_borrow_requests_enabled: Bool
+    var push_comments_enabled: Bool
+    var push_messages_enabled: Bool
+    var push_friend_new_items_enabled: Bool
+    var push_return_reminders_enabled: Bool
+    var created_at: Date?
+    var updated_at: Date?
+}
+
+struct SupabasePushDeviceTokenRow: Codable {
+    var id: UUID
+    var user_id: UUID
+    var platform: String
+    var token: String
+    var enabled: Bool
+    var created_at: Date?
+    var updated_at: Date?
+    var last_registered_at: Date?
+}
+
+struct SupabaseReturnReminderRow: Codable {
+    var id: UUID
+    var user_id: UUID
+    var borrow_request_id: UUID
+    var cadence: String
+    var next_reminder_at: Date
+    var last_sent_at: Date?
+    var is_enabled: Bool
+    var created_at: Date?
+    var updated_at: Date?
 }
 
 enum SupabaseDateCodec {

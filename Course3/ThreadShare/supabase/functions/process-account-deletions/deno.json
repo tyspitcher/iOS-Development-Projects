@@ -1,0 +1,8 @@
+{
+  "tasks": {
+    "serve": "supabase functions serve process-account-deletions --env-file ./supabase/.env.local"
+  },
+  "compilerOptions": {
+    "strict": true
+  }
+}

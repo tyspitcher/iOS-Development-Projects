@@ -6,139 +6,305 @@
 //
 
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
 
 struct AuthenticationView: View {
     @EnvironmentObject private var sessionStore: SupabaseSessionStore
+    @Binding var demoModeEnabled: Bool
     @StateObject private var viewModel = AuthViewModel()
+    @State private var isShowingForgotPasswordAlert = false
+    @State private var isShowingPassword = false
+    @State private var keyboardHeight: CGFloat = 0
+    @FocusState private var focusedField: FieldKind?
 
     var body: some View {
         ZStack {
             AppTheme.background.ignoresSafeArea()
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        ThreadShareLogoText()
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            ThreadShareLogoText()
 
-                        Text(viewModel.mode == .signIn ? "Welcome back." : "Create your ThreadShare account.")
-                            .font(AppTheme.titleFont(size: 28))
-                            .foregroundStyle(AppTheme.ink)
+                            Text(viewModel.mode == .signIn ? "Welcome back." : "Create your ThreadShare account.")
+                                .font(AppTheme.titleFont(size: 28))
+                                .foregroundStyle(AppTheme.ink)
 
-                        Text(viewModel.mode == .signIn ? "Sign in to keep browsing closets, requests, and messages." : "Set up your email login and profile in one step.")
-                            .font(AppTheme.bodyFont(size: 15))
-                            .foregroundStyle(AppTheme.mutedInk)
-                    }
-
-                    if viewModel.mode == .signUp {
-                        infoBanner(
-                            title: "Email verification is ready later",
-                            message: viewModel.emailVerificationNote
-                        )
-                    }
-
-                    Picker("Mode", selection: $viewModel.mode) {
-                        ForEach(AuthViewModel.Mode.allCases) { mode in
-                            Text(mode.displayName).tag(mode)
+                            Text(viewModel.mode == .signIn ? "Sign in to open your own closet, requests, and messages." : "Create a login and profile so ThreadShare feels like yours from the start.")
+                                .font(AppTheme.bodyFont(size: 15))
+                                .foregroundStyle(AppTheme.mutedInk)
                         }
-                    }
-                    .pickerStyle(.segmented)
 
-                    VStack(spacing: 14) {
-                        field(title: "Email", text: $viewModel.email, keyboard: .emailAddress)
-                        field(title: "Password", text: $viewModel.password, keyboard: .default, isSecure: true)
+                        Picker("Mode", selection: $viewModel.mode) {
+                            ForEach(AuthViewModel.Mode.allCases) { mode in
+                                Text(mode.displayName).tag(mode)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .accessibilityLabel("Authentication Mode")
+                        .accessibilityHint("Switch between signing in and creating a new account.")
 
-                        Text(viewModel.passwordRequirementSummary)
-                            .font(AppTheme.bodyFont(size: 12))
-                            .foregroundStyle(AppTheme.mutedInk)
-
-                        if viewModel.mode == .signUp {
-                            field(title: "Display Name", text: $viewModel.displayName)
-                            field(title: "Username", text: $viewModel.username)
-                            field(title: "City", text: $viewModel.city)
-
-                            infoBanner(
-                                title: "Onboarding coming next",
-                                message: viewModel.onboardingPreview
+                        if viewModel.mode == .signIn {
+                            signInCard
+                        } else {
+                            SignUpOnboardingPagerView(
+                                email: $viewModel.email,
+                                password: $viewModel.password,
+                                displayName: $viewModel.displayName,
+                                username: $viewModel.username,
+                                city: $viewModel.city,
+                                preferenceSelection: $viewModel.preferenceSelection,
+                                customBrandEntry: $viewModel.customBrandEntry,
+                                avatarImageData: $viewModel.avatarImageData,
+                                avatarFallbackColorHex: $viewModel.avatarFallbackColorHex,
+                                onboardingPreview: viewModel.onboardingPreview,
+                                emailVerificationNote: viewModel.emailVerificationNote,
+                                canSubmit: viewModel.canSubmit,
+                                isSubmitting: viewModel.isSubmitting,
+                                submitAction: {
+                                    Task { await viewModel.submit(using: sessionStore) }
+                                }
                             )
                         }
-                    }
-                    .padding(16)
-                    .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous)
-                            .stroke(AppTheme.border, lineWidth: 1)
-                    )
 
-                    if let errorMessage = viewModel.errorMessage {
-                        Text(errorMessage)
-                            .font(AppTheme.bodyFont(size: 13))
-                            .foregroundStyle(.red)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                        if let errorMessage = viewModel.errorMessage {
+                            Text(errorMessage)
+                                .font(AppTheme.bodyFont(size: 13))
+                                .foregroundStyle(.red)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .accessibilityLabel("Error: \(errorMessage)")
+                        }
 
-                    PrimaryButton(
-                        title: viewModel.mode.displayName,
-                        systemImage: viewModel.mode == .signIn ? "arrow.right.circle.fill" : "person.badge.plus"
-                    ) {
-                        Task { await viewModel.submit(using: sessionStore) }
-                    }
-                    .disabled(!viewModel.canSubmit || viewModel.isSubmitting)
+                        if viewModel.isSubmitting {
+                            ProgressView()
+                                .frame(maxWidth: .infinity)
+                        }
 
-                    if viewModel.isSubmitting {
-                        ProgressView()
-                            .frame(maxWidth: .infinity)
+#if DEBUG
+                        demoModeCard
+#endif
+                    }
+                    .padding(AppTheme.pagePadding)
+                    .padding(.bottom, max(160, keyboardHeight + 140))
+                }
+                .scrollDismissesKeyboard(.interactively)
+                .onChange(of: focusedField) { _, field in
+                    guard let field else { return }
+                    withAnimation(.easeInOut(duration: 0.22)) {
+                        proxy.scrollTo(field, anchor: .center)
                     }
                 }
-                .padding(AppTheme.pagePadding)
+                .onChange(of: viewModel.mode) { _, _ in
+                    viewModel.clearErrorMessage()
+                }
+                .onChange(of: viewModel.email) { _, _ in
+                    viewModel.clearErrorMessage()
+                }
+                .onChange(of: viewModel.password) { _, _ in
+                    viewModel.clearErrorMessage()
+                }
+                .onChange(of: viewModel.displayName) { _, _ in
+                    viewModel.clearErrorMessage()
+                }
+                .onChange(of: viewModel.username) { _, _ in
+                    viewModel.clearErrorMessage()
+                }
+                .onChange(of: viewModel.city) { _, _ in
+                    viewModel.clearErrorMessage()
+                }
+                .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { notification in
+                    guard let frame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else { return }
+                    withAnimation(.easeInOut(duration: 0.22)) {
+                        keyboardHeight = frame.height
+                    }
+                }
+                .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+                    withAnimation(.easeInOut(duration: 0.22)) {
+                        keyboardHeight = 0
+                    }
+                }
             }
+        }
+        .alert("Password Reset", isPresented: $isShowingForgotPasswordAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(viewModel.forgotPasswordMessage ?? "We sent password reset instructions if the email address is registered.")
         }
     }
 
+    #if DEBUG
+    private var demoModeCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Toggle(isOn: $demoModeEnabled) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Demo mode")
+                        .font(AppTheme.bodyFont(size: 14).weight(.semibold))
+                        .foregroundStyle(AppTheme.ink)
 
-    private func infoBanner(title: String, message: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title)
-                .font(AppTheme.bodyFont(size: 13).weight(.semibold))
-                .foregroundStyle(AppTheme.ink)
+                    Text("Use the sample closet for presentations.")
+                        .font(AppTheme.bodyFont(size: 13))
+                        .foregroundStyle(AppTheme.mutedInk)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .toggleStyle(SwitchToggleStyle(tint: AppTheme.accent))
+            .accessibilityLabel("Demo Mode")
+            .accessibilityHint("When on, opens a sample experience and bypasses normal sign in.")
 
-            Text(message)
-                .font(AppTheme.bodyFont(size: 13))
+            Text("Turn this off anytime to return to the Supabase login flow.")
+                .font(AppTheme.bodyFont(size: 12))
                 .foregroundStyle(AppTheme.mutedInk)
-                .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: AppTheme.smallCornerRadius, style: .continuous))
+        .padding(16)
+        .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: AppTheme.smallCornerRadius, style: .continuous)
+            RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous)
+                .stroke(AppTheme.border, lineWidth: 1)
+        )
+    }
+    #endif
+
+
+    private var signInCard: some View {
+        VStack(spacing: 14) {
+            field(
+                title: "Email",
+                text: $viewModel.email,
+                kind: .email
+            )
+            field(
+                title: "Password",
+                text: $viewModel.password,
+                kind: .password
+            )
+
+            Button {
+                Task {
+                    await viewModel.handleForgotPasswordTapped(using: sessionStore)
+                    isShowingForgotPasswordAlert = true
+                }
+            } label: {
+                Text("Forgot password?")
+                    .font(AppTheme.bodyFont(size: 13).weight(.semibold))
+                    .foregroundStyle(AppTheme.accent)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .frame(minHeight: 44, alignment: .trailing)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Shows the password reset status and next steps.")
+
+            Text(viewModel.passwordRequirementSummary)
+                .font(AppTheme.bodyFont(size: 12))
+                .foregroundStyle(AppTheme.mutedInk)
+
+            PrimaryButton(
+                title: viewModel.mode.displayName,
+                systemImage: "arrow.right.circle.fill"
+            ) {
+                Task { await viewModel.submit(using: sessionStore) }
+            }
+            .disabled(!viewModel.canSubmit || viewModel.isSubmitting)
+            .accessibilityHint("Attempts to sign in with your email and password.")
+        }
+        .padding(16)
+        .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous)
                 .stroke(AppTheme.border, lineWidth: 1)
         )
     }
 
-    private func field(title: String, text: Binding<String>, keyboard: UIKeyboardType = .default, isSecure: Bool = false) -> some View {
+    private func field(
+        title: String,
+        text: Binding<String>,
+        kind: FieldKind = .default
+    ) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
                 .font(AppTheme.bodyFont(size: 13))
                 .foregroundStyle(AppTheme.accent)
 
             Group {
-                if isSecure {
-                    SecureField(title, text: text)
+                if kind == .password {
+                    HStack(spacing: 8) {
+                        Group {
+                            if isShowingPassword {
+                                TextField(title, text: text)
+                            } else {
+                                SecureField(title, text: text)
+                            }
+                        }
+                        .modifier(AuthFieldInputStyle(kind: kind))
+                        .focused($focusedField, equals: kind)
+
+                        Button {
+                            isShowingPassword.toggle()
+                        } label: {
+                            Image(systemName: isShowingPassword ? "eye.slash.fill" : "eye.fill")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(AppTheme.mutedInk)
+                                .frame(width: 34, height: 34)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(isShowingPassword ? "Hide password" : "Show password")
+                    }
                 } else {
                     TextField(title, text: text)
+                        .modifier(AuthFieldInputStyle(kind: kind))
+                        .focused($focusedField, equals: kind)
                 }
             }
-            .font(AppTheme.bodyFont(size: 16))
-            .keyboardType(keyboard)
-            .textInputAutocapitalization(keyboard == .emailAddress ? .never : .words)
-            .autocorrectionDisabled()
             .padding(.horizontal, 14)
-            .frame(height: 46)
+            .frame(minHeight: 46)
             .background(AppTheme.background, in: RoundedRectangle(cornerRadius: AppTheme.smallCornerRadius, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: AppTheme.smallCornerRadius, style: .continuous)
                     .stroke(AppTheme.border, lineWidth: 1)
             )
+            .accessibilityLabel(title)
+            .id(kind)
+        }
+    }
+}
+
+private extension AuthenticationView {
+    enum FieldKind: Hashable {
+        case `default`
+        case email
+        case password
+    }
+}
+
+private struct AuthFieldInputStyle: ViewModifier {
+    let kind: AuthenticationView.FieldKind
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        switch kind {
+        case .email:
+            content
+                .font(AppTheme.bodyFont(size: 16))
+                .keyboardType(.emailAddress)
+                .textContentType(.emailAddress)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+        case .password:
+            content
+                .font(AppTheme.bodyFont(size: 16))
+                .keyboardType(.default)
+                .textContentType(.password)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+        case .default:
+            content
+                .font(AppTheme.bodyFont(size: 16))
+                .keyboardType(.default)
+                .textInputAutocapitalization(.words)
+                .autocorrectionDisabled()
         }
     }
 }

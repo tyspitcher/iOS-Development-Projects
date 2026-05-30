@@ -6,37 +6,28 @@
 //
 
 import SwiftUI
-import PhotosUI
-#if canImport(UIKit)
-import UIKit
-#endif
 
 struct AddItemSheetView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = AddItemViewModel()
-    @State private var selectedPhotoItem: PhotosPickerItem?
 
     var body: some View {
         NavigationStack {
             Form {
                 Section("Photo") {
-                    PhotosPicker(
-                        selection: $selectedPhotoItem,
-                        matching: .images,
-                        photoLibrary: .shared()
-                    ) {
-                        Label("Choose Item Photo", systemImage: "photo.on.rectangle.angled")
-                            .font(AppTheme.bodyFont(size: 16))
-                    }
-
-                    if let selectedUIImage = viewModel.selectedUIImage {
-                        Image(uiImage: selectedUIImage)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(maxWidth: .infinity)
-                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    }
+                    ItemPhotoSourcePicker(
+                        previewImageData: viewModel.selectedPhotoData,
+                        onLibraryImageData: { data in
+                            viewModel.loadSelectedPhoto(from: data)
+                        },
+                        onCameraImageData: { data in
+                            viewModel.loadSelectedPhoto(from: data)
+                        },
+                        onError: { message in
+                            viewModel.imageErrorMessage = message
+                        }
+                    )
                 }
 
                 Section("Details") {
@@ -97,19 +88,14 @@ struct AddItemSheetView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Save") {
                         guard viewModel.canSave else { return }
-                        _ = viewModel.save(in: appState)
-                        if viewModel.imageErrorMessage == nil {
-                            dismiss()
+                        Task {
+                            if await viewModel.save(in: appState) != nil {
+                                dismiss()
+                            }
                         }
                     }
                     .font(AppTheme.bodyFont(size: 16))
-                    .disabled(!viewModel.canSave)
-                }
-            }
-            .onChange(of: selectedPhotoItem) { _, newItem in
-                guard let newItem else { return }
-                Task {
-                    await viewModel.loadSelectedPhoto(from: newItem)
+                    .disabled(!viewModel.canSave || viewModel.isSaving)
                 }
             }
             .alert("Photo Error", isPresented: Binding(

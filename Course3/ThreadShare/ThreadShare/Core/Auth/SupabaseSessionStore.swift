@@ -25,7 +25,9 @@ final class SupabaseSessionStore: ObservableObject, SupabaseSessionProviding {
     private let hasLaunchedKey = "ThreadShare.hasLaunchedBefore"
 
     @MainActor
-    init(authService: SupabaseAuthService? = nil) {
+    init(
+        authService: SupabaseAuthService? = nil
+    ) {
         self.authService = authService ?? SupabaseAuthService()
 
         if UserDefaults.standard.bool(forKey: hasLaunchedKey) == false {
@@ -49,6 +51,7 @@ final class SupabaseSessionStore: ObservableObject, SupabaseSessionProviding {
             let refreshed = try await authService.validateOrRefresh(stored)
             session = refreshed
             try saveSession(refreshed)
+            await markLoginActivity(for: refreshed)
         } catch {
             clearStoredSession()
             session = nil
@@ -60,6 +63,7 @@ final class SupabaseSessionStore: ObservableObject, SupabaseSessionProviding {
         try saveSession(session)
         self.session = session
         pendingOnboardingDraft = nil
+        await markLoginActivity(for: session)
     }
 
     func signUp(
@@ -67,9 +71,31 @@ final class SupabaseSessionStore: ObservableObject, SupabaseSessionProviding {
         password: String,
         displayName: String,
         username: String,
-        city: String
+        city: String,
+        preferenceSelection: FashionPreferenceSelection,
+        avatarImageData: Data?,
+        avatarFallbackColorHex: String?
     ) async throws {
         let session = try await authService.signUp(email: email, password: password)
+
+        let storageService = SupabaseStorageService(sessionProvider: StaticSessionProvider(session: session))
+        let initials = AvatarDescriptor.initials(for: displayName, username: username)
+        let fallbackColorHex = avatarFallbackColorHex
+            ?? AvatarDescriptor.preferredFallbackColorHex(
+                for: preferenceSelection.colorPaletteIDs,
+                seed: "\(displayName)-\(username)-\(session.userID.uuidString)"
+            )
+
+        let avatarPath: String
+        if let avatarImageData {
+            avatarPath = try await storageService.uploadAvatarImage(
+                avatarImageData,
+                contentType: "image/jpeg",
+                userID: session.userID
+            )
+        } else {
+            avatarPath = AvatarDescriptor.generated(initials: initials, colorHex: fallbackColorHex)
+        }
 
         try await authService.bootstrapProfile(
             profile: UserProfile(
@@ -77,14 +103,15 @@ final class SupabaseSessionStore: ObservableObject, SupabaseSessionProviding {
                 displayName: displayName,
                 username: username,
                 bio: "",
-                avatarImageName: "person.crop.circle.fill",
+                avatarImageName: avatarPath,
                 city: city,
                 relationship: .publicUser,
                 visibility: .friendsOnly,
                 followerCount: 0,
                 followingCount: 0,
-                styleInterests: [],
-                favoriteBrands: [],
+                styleInterests: preferenceSelection.styleIDs,
+                favoriteBrands: preferenceSelection.favoriteBrands,
+                colorPalettePreferenceIDs: preferenceSelection.colorPaletteIDs,
                 isFollowedByCurrentUser: false
             ),
             email: email,
@@ -93,36 +120,55 @@ final class SupabaseSessionStore: ObservableObject, SupabaseSessionProviding {
 
         try saveSession(session)
         self.session = session
-        pendingOnboardingDraft = OnboardingQuestionnaireDraft(userID: session.userID, email: email)
+        await markLoginActivity(for: session)
+        pendingOnboardingDraft = OnboardingQuestionnaireDraft(
+            userID: session.userID,
+            email: email,
+            preferredStyleIDs: preferenceSelection.styleIDs,
+            favoriteBrands: preferenceSelection.favoriteBrands,
+            preferredColorPaletteIDs: preferenceSelection.colorPaletteIDs
+        )
     }
 
     func signOut() async {
-        if let session {
-            try? await authService.signOut(session)
-        }
-
+        let activeSession = session
         clearStoredSession()
         self.session = nil
         pendingOnboardingDraft = nil
+
+        if let activeSession {
+            try? await authService.signOut(activeSession)
+        }
+
     }
 
     func beginOnboardingDraft(
-        styles: [OnboardingStylePreference] = [],
+        styleIDs: [FashionStyle.ID] = [],
         favoriteBrands: [String] = [],
+        colorPaletteIDs: [FashionColorPalette.ID] = [],
         usageGoals: [OnboardingUsageGoal] = []
     ) {
         guard let session else { return }
         pendingOnboardingDraft = OnboardingQuestionnaireDraft(
             userID: session.userID,
             email: session.email,
-            preferredStyles: styles,
+            preferredStyleIDs: styleIDs,
             favoriteBrands: favoriteBrands,
+            preferredColorPaletteIDs: colorPaletteIDs,
             usageGoals: usageGoals
         )
     }
 
     func completeOnboarding() {
         pendingOnboardingDraft = nil
+    }
+
+    func requestPasswordReset(email: String) async throws {
+        try await authService.requestPasswordReset(email: email.trimmingCharacters(in: .whitespacesAndNewlines))
+    }
+
+    private func markLoginActivity(for session: SupabaseSession) async {
+        try? await SupabaseUserActivityService(session: session).markLogin()
     }
 
     private func saveSession(_ session: SupabaseSession) throws {
@@ -142,5 +188,13 @@ final class SupabaseSessionStore: ObservableObject, SupabaseSessionProviding {
 
     private func clearStoredSession() {
         KeychainStore.delete(service: keychainService, account: keychainAccount)
+    }
+}
+
+private final class StaticSessionProvider: SupabaseSessionProviding {
+    let session: SupabaseSession?
+
+    init(session: SupabaseSession?) {
+        self.session = session
     }
 }

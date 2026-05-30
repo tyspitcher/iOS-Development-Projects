@@ -19,8 +19,16 @@ enum SampleData {
         visibility: .friendsOnly,
         followerCount: 128,
         followingCount: 96,
-        styleInterests: ["Capsule", "Vintage Denim", "Campus Casual", "Dinner Looks"],
+        styleInterests: [
+            FashionPreferenceCatalog.StyleID.casualEveryday,
+            FashionPreferenceCatalog.StyleID.vintage,
+            FashionPreferenceCatalog.StyleID.classicTimeless
+        ],
         favoriteBrands: ["Reformation", "Aritzia", "Levi's", "Madewell"],
+        colorPalettePreferenceIDs: [
+            FashionPreferenceCatalog.ColorPaletteID.softNeutrals,
+            FashionPreferenceCatalog.ColorPaletteID.coastal
+        ],
         isFollowedByCurrentUser: true
     )
 
@@ -37,8 +45,16 @@ enum SampleData {
             visibility: .friendsOnly,
             followerCount: 342,
             followingCount: 211,
-            styleInterests: ["Quiet Luxury", "Minimalist", "Date Night Looks"],
+            styleInterests: [
+                FashionPreferenceCatalog.StyleID.quietLuxury,
+                FashionPreferenceCatalog.StyleID.minimalist,
+                FashionPreferenceCatalog.StyleID.glamNightOut
+            ],
             favoriteBrands: ["Aritzia", "The Frankie Shop", "Anine Bing", "Prada"],
+            colorPalettePreferenceIDs: [
+                FashionPreferenceCatalog.ColorPaletteID.softNeutrals,
+                FashionPreferenceCatalog.ColorPaletteID.monochrome
+            ],
             isFollowedByCurrentUser: true
         ),
         UserProfile(
@@ -52,8 +68,16 @@ enum SampleData {
             visibility: .publicProfile,
             followerCount: 1_482,
             followingCount: 388,
-            styleInterests: ["Gorpcore", "Earthy", "Utilitarian"],
+            styleInterests: [
+                FashionPreferenceCatalog.StyleID.gorpcore,
+                FashionPreferenceCatalog.StyleID.workwear,
+                FashionPreferenceCatalog.StyleID.militaryUtility
+            ],
             favoriteBrands: ["Patagonia", "Carhartt", "Birkenstock"],
+            colorPalettePreferenceIDs: [
+                FashionPreferenceCatalog.ColorPaletteID.warmEarth,
+                FashionPreferenceCatalog.ColorPaletteID.coastal
+            ],
             isFollowedByCurrentUser: true
         ),
         UserProfile(
@@ -67,8 +91,16 @@ enum SampleData {
             visibility: .publicProfile,
             followerCount: 905,
             followingCount: 177,
-            styleInterests: ["Athleisure", "Clean Sporty", "Set Matching"],
+            styleInterests: [
+                FashionPreferenceCatalog.StyleID.athleisure,
+                FashionPreferenceCatalog.StyleID.sportyBlokecore,
+                FashionPreferenceCatalog.StyleID.minimalist
+            ],
             favoriteBrands: ["Lululemon", "Alo Yoga", "Hoka", "Aritzia Tna"],
+            colorPalettePreferenceIDs: [
+                FashionPreferenceCatalog.ColorPaletteID.coolTones,
+                FashionPreferenceCatalog.ColorPaletteID.monochrome
+            ],
             isFollowedByCurrentUser: false
         ),
         UserProfile(
@@ -82,8 +114,16 @@ enum SampleData {
             visibility: .publicProfile,
             followerCount: 520,
             followingCount: 268,
-            styleInterests: ["Streetwear Chic", "Hypebae", "Sneaker Rotation"],
+            styleInterests: [
+                FashionPreferenceCatalog.StyleID.streetwear,
+                FashionPreferenceCatalog.StyleID.skater,
+                FashionPreferenceCatalog.StyleID.y2k
+            ],
             favoriteBrands: ["Nike", "New Balance", "Adidas", "Salomon"],
+            colorPalettePreferenceIDs: [
+                FashionPreferenceCatalog.ColorPaletteID.highContrast,
+                FashionPreferenceCatalog.ColorPaletteID.jewelTones
+            ],
             isFollowedByCurrentUser: true
         ),
         UserProfile(
@@ -97,8 +137,16 @@ enum SampleData {
             visibility: .publicProfile,
             followerCount: 804,
             followingCount: 302,
-            styleInterests: ["TikTok Glam", "Y2K Revival", "Hyper Trendy"],
+            styleInterests: [
+                FashionPreferenceCatalog.StyleID.y2k,
+                FashionPreferenceCatalog.StyleID.glamNightOut,
+                FashionPreferenceCatalog.StyleID.coquette
+            ],
             favoriteBrands: ["House of CB", "Zara", "Princess Polly", "Oh Polly"],
+            colorPalettePreferenceIDs: [
+                FashionPreferenceCatalog.ColorPaletteID.pastelRomance,
+                FashionPreferenceCatalog.ColorPaletteID.jewelTones
+            ],
             isFollowedByCurrentUser: false
         )
     ]
@@ -658,6 +706,37 @@ enum SampleData {
         )
     ]
 
+    static let itemComments: [ThreadItemComment] = [
+        ThreadItemComment(
+            id: UUID(uuidString: "90000000-0000-0000-0000-000000000001")!,
+            itemID: threadItems[0].id,
+            authorID: currentUser.id,
+            body: "This blazer looks so polished. Would you style it with denim too?",
+            createdAt: daysAgo(1)
+        ),
+        ThreadItemComment(
+            id: UUID(uuidString: "90000000-0000-0000-0000-000000000002")!,
+            itemID: threadItems[0].id,
+            authorID: users[1].id,
+            body: "Yes, definitely. I usually wear it with vintage jeans and a simple tank.",
+            createdAt: hoursAgo(20)
+        ),
+        ThreadItemComment(
+            id: UUID(uuidString: "90000000-0000-0000-0000-000000000003")!,
+            itemID: threadItems[2].id,
+            authorID: users[4].id,
+            body: "This is perfect for mountain weekends.",
+            createdAt: daysAgo(2)
+        ),
+        ThreadItemComment(
+            id: UUID(uuidString: "90000000-0000-0000-0000-000000000004")!,
+            itemID: threadItems[6].id,
+            authorID: users[1].id,
+            body: "The cropped fit on this jacket is so good.",
+            createdAt: hoursAgo(6)
+        )
+    ]
+
     static let borrowRequests: [BorrowRequest] = [
         BorrowRequest(
             id: UUID(uuidString: "12121212-1212-1212-1212-121212121212")!,
@@ -727,6 +806,42 @@ enum SampleData {
             body: "Sneakers are all yours. I can bring them tonight.",
             sentAt: hoursAgo(8),
             isRead: false
+        )
+    ]
+
+    static let notifications: [ThreadNotification] = [
+        ThreadNotification(
+            id: UUID(uuidString: "71000000-0000-0000-0000-000000000001")!,
+            recipientID: currentUser.id,
+            actorID: users[1].id,
+            kind: .borrowRequest,
+            title: "Borrow request",
+            body: "Sofia wants to borrow your moto jacket.",
+            itemID: threadItems[8].id,
+            borrowRequestID: borrowRequests[2].id,
+            createdAt: hoursAgo(3)
+        ),
+        ThreadNotification(
+            id: UUID(uuidString: "71000000-0000-0000-0000-000000000002")!,
+            recipientID: currentUser.id,
+            actorID: users[3].id,
+            kind: .directMessage,
+            title: "New message",
+            body: "Jordan sent a note about your sneaker request.",
+            borrowRequestID: borrowRequests[1].id,
+            messageID: dmMessages[1].id,
+            createdAt: hoursAgo(8)
+        ),
+        ThreadNotification(
+            id: UUID(uuidString: "71000000-0000-0000-0000-000000000003")!,
+            recipientID: currentUser.id,
+            actorID: users[1].id,
+            kind: .friendRecentlyAdded,
+            title: "New closet piece",
+            body: "Sofia added a structured mini crossbody.",
+            itemID: threadItems[17].id,
+            createdAt: daysAgo(1),
+            readAt: hoursAgo(12)
         )
     ]
 

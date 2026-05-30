@@ -13,24 +13,48 @@ final class LocalThreadRepository: ThreadRepository {
     private var currentUser: UserProfile
     private var users: [UserProfile]
     private var threadItems: [ThreadItem]
+    private var itemComments: [ThreadItemComment]
     private var borrowRequests: [BorrowRequest]
     private var messages: [DMMessage]
     private var friendRequestState: FriendRequestState
+    private var pendingDeletionRequests: [UserProfile.ID: AccountDeletionRequest]
+    private var immediateDeletionNotices: [UserProfile.ID: ImmediateAccountDeletionNotice]
+    private var blockedUserIDs: Set<UserProfile.ID>
+    private var itemReports: [ItemReport]
+    private var notifications: [ThreadNotification]
+    private var notificationPreferences: ThreadNotificationPreferences?
+    private var returnReminders: [BorrowReturnReminder]
 
     init(
         currentUser: UserProfile = SampleData.currentUser,
         users: [UserProfile] = SampleData.users,
         threadItems: [ThreadItem] = SampleData.threadItems,
+        itemComments: [ThreadItemComment] = SampleData.itemComments,
         borrowRequests: [BorrowRequest] = SampleData.borrowRequests,
         messages: [DMMessage] = SampleData.dmMessages,
-        friendRequestState: FriendRequestState = FriendRequestState(incomingUserIDs: [SampleData.users[5].id])
+        friendRequestState: FriendRequestState = FriendRequestState(incomingUserIDs: [SampleData.users[5].id]),
+        pendingDeletionRequests: [UserProfile.ID: AccountDeletionRequest] = [:],
+        immediateDeletionNotices: [UserProfile.ID: ImmediateAccountDeletionNotice] = [:],
+        blockedUserIDs: Set<UserProfile.ID> = [],
+        itemReports: [ItemReport] = [],
+        notifications: [ThreadNotification] = SampleData.notifications,
+        notificationPreferences: ThreadNotificationPreferences? = nil,
+        returnReminders: [BorrowReturnReminder] = []
     ) {
         self.currentUser = currentUser
         self.users = users
         self.threadItems = threadItems
+        self.itemComments = itemComments
         self.borrowRequests = borrowRequests
         self.messages = messages
         self.friendRequestState = friendRequestState
+        self.pendingDeletionRequests = pendingDeletionRequests
+        self.immediateDeletionNotices = immediateDeletionNotices
+        self.blockedUserIDs = blockedUserIDs
+        self.itemReports = itemReports
+        self.notifications = notifications
+        self.notificationPreferences = notificationPreferences
+        self.returnReminders = returnReminders
     }
 
     func fetchCurrentUser() async throws -> UserProfile {
@@ -45,6 +69,10 @@ final class LocalThreadRepository: ThreadRepository {
         threadItems
     }
 
+    func fetchItemComments() async throws -> [ThreadItemComment] {
+        itemComments
+    }
+
     func fetchBorrowRequests() async throws -> [BorrowRequest] {
         borrowRequests
     }
@@ -55,6 +83,39 @@ final class LocalThreadRepository: ThreadRepository {
 
     func fetchFriendRequestState() async throws -> FriendRequestState {
         friendRequestState
+    }
+
+    func fetchPendingAccountDeletionRequest() async throws -> AccountDeletionRequest? {
+        guard let request = pendingDeletionRequests[currentUser.id] else { return nil }
+        return request.status == .pending ? request : nil
+    }
+
+    func fetchImmediateAccountDeletionNotice() async throws -> ImmediateAccountDeletionNotice? {
+        immediateDeletionNotices[currentUser.id]
+    }
+
+    func fetchBlockedUserIDs() async throws -> Set<UserProfile.ID> {
+        blockedUserIDs
+    }
+
+    func fetchNotifications() async throws -> [ThreadNotification] {
+        notifications.sorted { $0.createdAt > $1.createdAt }
+    }
+
+    func fetchNotificationPreferences() async throws -> ThreadNotificationPreferences? {
+        notificationPreferences ?? ThreadNotificationPreferences(userID: currentUser.id)
+    }
+
+    func fetchNotificationPreferences(for userID: UserProfile.ID) async throws -> ThreadNotificationPreferences? {
+        if userID == currentUser.id {
+            return notificationPreferences ?? ThreadNotificationPreferences(userID: currentUser.id)
+        }
+
+        return ThreadNotificationPreferences(userID: userID)
+    }
+
+    func fetchReturnReminders() async throws -> [BorrowReturnReminder] {
+        returnReminders
     }
 
     func saveUser(_ user: UserProfile) async throws {
@@ -69,6 +130,18 @@ final class LocalThreadRepository: ThreadRepository {
         upsert(item, in: &threadItems)
     }
 
+    func saveThreadItemImageData(_ data: Data, for item: ThreadItem) async throws -> String {
+        try ThreadItemImageStore.saveImageData(data)
+    }
+
+    func deleteThreadItemImage(at path: String) async throws {
+        try ThreadItemImageStore.deleteImage(named: path)
+    }
+
+    func saveItemComment(_ comment: ThreadItemComment) async throws {
+        upsert(comment, in: &itemComments)
+    }
+
     func saveBorrowRequest(_ request: BorrowRequest) async throws {
         upsert(request, in: &borrowRequests)
     }
@@ -77,19 +150,101 @@ final class LocalThreadRepository: ThreadRepository {
         upsert(message, in: &messages)
     }
 
+    func saveItemReport(_ report: ItemReport) async throws {
+        upsert(report, in: &itemReports)
+    }
+
+    func saveNotification(_ notification: ThreadNotification) async throws {
+        upsert(notification, in: &notifications)
+    }
+
+    func dispatchPushNotification(_ notificationID: ThreadNotification.ID) async throws {
+        // Demo/local mode does not call cloud push infrastructure.
+    }
+
+    func saveNotificationPreferences(_ preferences: ThreadNotificationPreferences) async throws {
+        notificationPreferences = preferences
+    }
+
+    func saveReturnReminder(_ reminder: BorrowReturnReminder) async throws {
+        upsert(reminder, in: &returnReminders)
+    }
+
     func saveFriendRequestState(_ state: FriendRequestState) async throws {
         friendRequestState = state
     }
 
     func deleteThreadItem(_ itemID: ThreadItem.ID) async throws {
         threadItems.removeAll { $0.id == itemID }
+        itemComments.removeAll { $0.itemID == itemID }
         borrowRequests.removeAll { $0.itemID == itemID }
+    }
+
+    func deleteItemComment(_ commentID: ThreadItemComment.ID) async throws {
+        itemComments.removeAll { $0.id == commentID }
+    }
+
+    func requestAccountDeletion(for userID: UserProfile.ID) async throws -> AccountDeletionRequest {
+        let request = AccountDeletionRequest(userID: userID)
+        pendingDeletionRequests[userID] = request
+        return request
+    }
+
+    func requestImmediateAccountDeletion(
+        for userID: UserProfile.ID,
+        confirmationStatement: String
+    ) async throws -> ImmediateAccountDeletionNotice {
+        let notice = ImmediateAccountDeletionNotice(
+            userID: userID,
+            confirmationStatement: confirmationStatement,
+            backendRequirementMessage: "Immediate permanent deletion still needs a trusted server-side delete function. Your account remains active until that backend work is completed."
+        )
+        immediateDeletionNotices[userID] = notice
+        return notice
+    }
+
+    func cancelAccountDeletion(for userID: UserProfile.ID) async throws {
+        guard var request = pendingDeletionRequests[userID] else { return }
+        request.status = .canceled
+        request.canceledAt = Date()
+        pendingDeletionRequests[userID] = request
+    }
+
+    func blockUser(_ userID: UserProfile.ID) async throws {
+        blockedUserIDs.insert(userID)
+    }
+
+    func updateCurrentUserActivity(lastActiveAt: Date) async throws {
+        // Demo mode keeps activity local and ephemeral.
+    }
+
+    func markMessagesRead(from senderID: UserProfile.ID, to recipientID: UserProfile.ID) async throws {
+        for index in messages.indices {
+            if messages[index].senderID == senderID, messages[index].recipientID == recipientID {
+                messages[index].isRead = true
+            }
+        }
+    }
+
+    func markNotificationRead(_ notificationID: ThreadNotification.ID, readAt: Date) async throws {
+        guard let index = notifications.firstIndex(where: { $0.id == notificationID }) else { return }
+        notifications[index].readAt = readAt
+    }
+
+    func markAllNotificationsRead(readAt: Date) async throws {
+        for index in notifications.indices {
+            notifications[index].readAt = notifications[index].readAt ?? readAt
+        }
     }
 
     func setItemLiked(_ itemID: ThreadItem.ID, liked: Bool, likedAt: Date?) async throws {
         guard let index = threadItems.firstIndex(where: { $0.id == itemID }) else { return }
+        let wasLiked = threadItems[index].isLikedByCurrentUser
         threadItems[index].isLikedByCurrentUser = liked
         threadItems[index].likedAt = likedAt
+        if wasLiked != liked {
+            threadItems[index].likesCount = max(0, threadItems[index].likesCount + (liked ? 1 : -1))
+        }
     }
 
     func setUserFollowed(_ userID: UserProfile.ID, followed: Bool) async throws {

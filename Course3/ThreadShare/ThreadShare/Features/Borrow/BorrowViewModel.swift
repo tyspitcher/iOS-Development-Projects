@@ -32,6 +32,13 @@ struct BorrowViewModel {
         return sortedRequests.filter { $0.requesterID == currentUser.id && $0.status == .approved }
     }
 
+    var awaitingOwnerConfirmationAsBorrower: [BorrowRequest] {
+        guard let currentUser = appState.currentUser else { return [] }
+        return sortedRequests.filter {
+            $0.requesterID == currentUser.id && $0.status == .returnPendingOwnerConfirmation
+        }
+    }
+
     var lendingOut: [BorrowRequest] {
         guard let currentUser = appState.currentUser else { return [] }
         return sortedRequests.filter {
@@ -39,12 +46,26 @@ struct BorrowViewModel {
         }
     }
 
+    var returnConfirmationsNeededAsOwner: [BorrowRequest] {
+        guard let currentUser = appState.currentUser else { return [] }
+        return sortedRequests.filter {
+            $0.ownerID == currentUser.id && $0.status == .returnPendingOwnerConfirmation
+        }
+    }
+
     var isEmpty: Bool {
-        appState.borrowRequests.isEmpty
+        requestsSent.isEmpty &&
+        borrowedByMe.isEmpty &&
+        awaitingOwnerConfirmationAsBorrower.isEmpty &&
+        lendingOut.isEmpty &&
+        returnConfirmationsNeededAsOwner.isEmpty
     }
 
     private var sortedRequests: [BorrowRequest] {
-        appState.borrowRequests.sorted { $0.createdAt > $1.createdAt }
+        var seen = Set<BorrowRequest.ID>()
+        return appState.borrowRequests
+            .sorted { $0.createdAt > $1.createdAt }
+            .filter { seen.insert($0.id).inserted }
     }
 
     func item(for request: BorrowRequest) -> ThreadItem? {
@@ -56,12 +77,48 @@ struct BorrowViewModel {
         return appState.users.first { $0.id == personID }?.displayName ?? "ThreadShare User"
     }
 
-    func markReturned(_ request: BorrowRequest) {
-        appState.updateBorrowRequest(request.id, status: .returned)
+    func markReturnedByBorrower(_ request: BorrowRequest) {
+        appState.borrowerMarkedRequestReturned(request.id)
     }
 
-    func canMarkReturned(_ request: BorrowRequest) -> Bool {
-        guard appState.currentUser != nil else { return false }
-        return request.status == .approved
+    func confirmReturnedByOwner(_ request: BorrowRequest) {
+        appState.ownerConfirmedRequestReturned(request.id)
+    }
+
+    func approveRequest(_ request: BorrowRequest) {
+        appState.updateBorrowRequest(request.id, status: .approved)
+    }
+
+    func declineRequest(_ request: BorrowRequest) {
+        appState.updateBorrowRequest(request.id, status: .declined)
+    }
+
+    func reminder(for request: BorrowRequest) -> BorrowReturnReminder? {
+        appState.returnReminder(for: request.id)
+    }
+
+    func setReminder(_ cadence: ReturnReminderCadence?, for request: BorrowRequest) {
+        appState.setReturnReminder(for: request, cadence: cadence)
+    }
+
+    func canSetReminder(_ request: BorrowRequest) -> Bool {
+        guard let currentUser = appState.currentUser else { return false }
+        return request.requesterID == currentUser.id && request.status == .approved
+    }
+
+    func canMarkReturnedByBorrower(_ request: BorrowRequest) -> Bool {
+        guard let currentUser = appState.currentUser else { return false }
+        return request.requesterID == currentUser.id && request.status == .approved
+    }
+
+    func canConfirmReturnedByOwner(_ request: BorrowRequest) -> Bool {
+        guard let currentUser = appState.currentUser else { return false }
+        return request.ownerID == currentUser.id &&
+            (request.status == .approved || request.status == .returnPendingOwnerConfirmation)
+    }
+
+    func canApproveOrDecline(_ request: BorrowRequest) -> Bool {
+        guard let currentUser = appState.currentUser else { return false }
+        return request.ownerID == currentUser.id && request.status == .pending
     }
 }

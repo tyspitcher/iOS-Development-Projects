@@ -34,6 +34,10 @@ struct ProfileViewModel {
         appState.requestedFriends.count
     }
 
+    var unreadNotificationCount: Int {
+        appState.unreadNotificationCount
+    }
+
     func closetItems(for user: UserProfile) -> [ThreadItem] {
         appState.items(for: user)
     }

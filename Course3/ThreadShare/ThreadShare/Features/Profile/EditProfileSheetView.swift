@@ -9,56 +9,60 @@ import SwiftUI
 
 struct EditProfileSheetView: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var sessionStore: SupabaseSessionStore
     @Environment(\.dismiss) private var dismiss
 
-    @State private var draftUser: UserProfile
-    @State private var styleInterestsText: String
-    @State private var favoriteBrandsText: String
-    @State private var isClosetPublic: Bool
+    @StateObject private var viewModel: EditProfileViewModel
+    @State private var selectedAvatarData: Data?
+    @State private var isSaving = false
+    @State private var activeAlertMessage: String?
 
     init(user: UserProfile) {
-        _draftUser = State(initialValue: user)
-        _styleInterestsText = State(initialValue: user.styleInterests.joined(separator: ", "))
-        _favoriteBrandsText = State(initialValue: user.favoriteBrands.joined(separator: ", "))
-        _isClosetPublic = State(initialValue: user.visibility == .publicProfile)
-    }
-
-    private var canSave: Bool {
-        !draftUser.displayName.trimmed.isEmpty &&
-        !draftUser.username.trimmed.isEmpty
+        _viewModel = StateObject(wrappedValue: EditProfileViewModel(user: user))
     }
 
     var body: some View {
         NavigationStack {
             Form {
                 Section("Profile") {
+                    profilePhotoSection
+
                     profileField(label: "Name") {
-                        TextField("Name", text: $draftUser.displayName)
+                        TextField("Name", text: $viewModel.displayName)
+                            .textContentType(.name)
+                            .accessibilityLabel("Name")
                     }
 
                     profileField(label: "Username") {
-                        TextField("Username", text: $draftUser.username)
+                        TextField("Username", text: $viewModel.username)
+                            .textContentType(.username)
                             .textInputAutocapitalization(.never)
+                            .accessibilityLabel("Username")
                     }
 
                     profileField(label: "City and State") {
-                        TextField("City", text: $draftUser.city)
+                        TextField("City", text: $viewModel.city)
+                            .textContentType(.addressCity)
+                            .accessibilityLabel("City and State")
                     }
 
                     profileField(label: "Bio") {
-                        TextField("Bio", text: $draftUser.bio, axis: .vertical)
+                        TextField("Bio", text: $viewModel.bio, axis: .vertical)
                             .lineLimit(3...6)
+                            .accessibilityLabel("Bio")
+                            .accessibilityHint("Optional profile description.")
                     }
                 }
 
                 Section("Visibility") {
-                    Picker("Profile visibility", selection: $draftUser.visibility) {
+                    Picker("Profile visibility", selection: $viewModel.visibility) {
                         ForEach(ProfileVisibility.allCases) { visibility in
                             Text(visibility.displayName).tag(visibility)
                         }
                     }
+                    .accessibilityHint("Controls who can see your profile.")
 
-                    Toggle(isOn: $isClosetPublic) {
+                    Toggle(isOn: $viewModel.isClosetPublic) {
                         VStack(alignment: .leading, spacing: 3) {
                             Text("Public closet")
                                 .font(AppTheme.bodyFont(size: 14))
@@ -70,33 +74,31 @@ struct EditProfileSheetView: View {
                         }
                     }
                     .toggleStyle(.switch)
+                    .accessibilityHint("Turn off to keep your closet private.")
                 }
 
-                Section("Style") {
-                    profileField(label: "Style interests") {
-                        TextField("Style interests", text: $styleInterestsText, axis: .vertical)
-                            .lineLimit(2...4)
-                    }
-
-                    profileField(label: "Favorite brands") {
-                        TextField("Favorite brands", text: $favoriteBrandsText, axis: .vertical)
-                            .lineLimit(2...4)
-                    }
+                Section("Preferences") {
+                    FashionPreferenceSelectionView(
+                        selection: $viewModel.preferenceSelection,
+                        customBrandEntry: $viewModel.customBrandEntry
+                    )
+                    .padding(.vertical, 4)
                 }
             }
             .font(AppTheme.bodyFont(size: 16))
             .navigationTitle("Edit Profile")
             .navigationBarTitleDisplayMode(.inline)
-            .onChange(of: draftUser.visibility) { _, visibility in
-                isClosetPublic = visibility == .publicProfile
+            .onChange(of: viewModel.visibility) { _, _ in
+                viewModel.syncClosetAccessFromVisibility()
             }
-            .onChange(of: isClosetPublic) { _, isPublic in
-                draftUser.visibility = isPublic ? .publicProfile : .privateProfile
+            .onChange(of: viewModel.isClosetPublic) { _, _ in
+                viewModel.syncVisibilityFromClosetAccess()
             }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
                         .font(AppTheme.bodyFont(size: 16))
+                        .accessibilityHint("Discard profile edits and close this screen.")
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
@@ -104,10 +106,58 @@ struct EditProfileSheetView: View {
                         saveProfile()
                     }
                     .font(AppTheme.bodyFont(size: 16))
-                    .disabled(!canSave)
+                    .disabled(!viewModel.canSave || isSaving)
+                    .accessibilityHint("Save profile updates and close this screen.")
+                }
+            }
+            .alert("Profile Photo", isPresented: Binding(
+                get: { activeAlertMessage != nil },
+                set: { if $0 == false { activeAlertMessage = nil } }
+            )) {
+                Button("OK", role: .cancel) {
+                    activeAlertMessage = nil
+                }
+            } message: {
+                Text(activeAlertMessage ?? "Unable to update the profile photo.")
+            }
+        }
+    }
+
+    private var profilePhotoSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Photo")
+                .font(AppTheme.bodyFont(size: 12))
+                .foregroundStyle(AppTheme.accent)
+                .textCase(.uppercase)
+
+            HStack(alignment: .center, spacing: 14) {
+                Group {
+                    if let selectedAvatarData {
+                        DataBackedImageView(data: selectedAvatarData, contentMode: .fill)
+                    } else {
+                        UserAvatarView(imageName: viewModel.avatarImageName, size: 84)
+                    }
+                }
+                .frame(width: 84, height: 84)
+                .clipShape(Circle())
+                .overlay(Circle().stroke(AppTheme.border, lineWidth: 1))
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Update your profile photo from your library or camera.")
+                        .font(AppTheme.bodyFont(size: 13))
+                        .foregroundStyle(AppTheme.mutedInk)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    ProfilePhotoSourcePicker(
+                        previewImageData: selectedAvatarData,
+                        onLibraryImageData: handleLibraryImageData,
+                        onCameraImageData: handleCameraImageData,
+                        onError: handleAvatarError
+                    )
                 }
             }
         }
+        .padding(.vertical, 3)
     }
 
     private func profileField<Content: View>(
@@ -128,27 +178,51 @@ struct EditProfileSheetView: View {
     }
 
     private func saveProfile() {
-        draftUser.displayName = draftUser.displayName.trimmed
-        draftUser.username = draftUser.username.trimmed.trimmingCharacters(in: CharacterSet(charactersIn: "@"))
-        draftUser.city = draftUser.city.trimmed
-        draftUser.bio = draftUser.bio.trimmed
-        draftUser.styleInterests = commaSeparatedValues(from: styleInterestsText)
-        draftUser.favoriteBrands = commaSeparatedValues(from: favoriteBrandsText)
+        Task {
+            isSaving = true
+            defer { isSaving = false }
 
-        appState.updateCurrentUser(draftUser)
-        dismiss()
+            do {
+                let previousAvatarPath = viewModel.avatarImageName
+                let avatarPayloadData = selectedAvatarData
+                if let avatarPayloadData {
+                    if sessionStore.session != nil {
+                        let storageService = SupabaseStorageService(sessionProvider: sessionStore)
+                        let avatarPath = try await storageService.uploadAvatarImage(
+                            avatarPayloadData,
+                            contentType: "image/jpeg",
+                            userID: viewModel.userID
+                        )
+                        if previousAvatarPath != avatarPath, previousAvatarPath.contains("/") {
+                            try? await storageService.deleteAvatarImage(at: previousAvatarPath)
+                        }
+                        viewModel.avatarImageName = avatarPath
+                    } else {
+                        let avatarFileName = try ProfileAvatarStore.saveLocalAvatarImageData(
+                            avatarPayloadData,
+                            userID: viewModel.userID
+                        )
+                        viewModel.avatarImageName = avatarFileName
+                    }
+                }
+
+                appState.updateCurrentUser(viewModel.makeUpdatedUser())
+                dismiss()
+            } catch {
+                activeAlertMessage = "We couldn't save the selected profile photo right now. \(error.localizedDescription)"
+            }
+        }
     }
 
-    private func commaSeparatedValues(from text: String) -> [String] {
-        text
-            .split(separator: ",")
-            .map { String($0).trimmed }
-            .filter { !$0.isEmpty }
+    private func handleLibraryImageData(_ data: Data) {
+        selectedAvatarData = data
     }
-}
 
-private extension String {
-    var trimmed: String {
-        trimmingCharacters(in: .whitespacesAndNewlines)
+    private func handleCameraImageData(_ data: Data) {
+        selectedAvatarData = data
+    }
+
+    private func handleAvatarError(_ message: String) {
+        activeAlertMessage = message
     }
 }

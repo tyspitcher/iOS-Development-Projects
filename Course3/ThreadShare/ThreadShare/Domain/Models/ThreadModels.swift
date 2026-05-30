@@ -106,6 +106,7 @@ enum ItemAvailabilityStatus: String, CaseIterable, Codable, Identifiable {
 enum BorrowRequestStatus: String, CaseIterable, Codable, Identifiable {
     case pending
     case approved
+    case returnPendingOwnerConfirmation
     case declined
     case returned
 
@@ -115,6 +116,7 @@ enum BorrowRequestStatus: String, CaseIterable, Codable, Identifiable {
         switch self {
         case .pending: "Pending"
         case .approved: "Approved"
+        case .returnPendingOwnerConfirmation: "Return Pending"
         case .declined: "Declined"
         case .returned: "Returned"
         }
@@ -150,7 +152,10 @@ struct UserProfile: Identifiable, Codable, Hashable {
     var followingCount: Int
     var styleInterests: [String]
     var favoriteBrands: [String]
+    var colorPalettePreferenceIDs: [FashionColorPalette.ID]
     var isFollowedByCurrentUser: Bool
+    var lastLoginAt: Date?
+    var lastActiveAt: Date?
 
     init(
         id: UUID = UUID(),
@@ -165,7 +170,10 @@ struct UserProfile: Identifiable, Codable, Hashable {
         followingCount: Int,
         styleInterests: [String] = [],
         favoriteBrands: [String] = [],
-        isFollowedByCurrentUser: Bool = false
+        colorPalettePreferenceIDs: [FashionColorPalette.ID] = [],
+        isFollowedByCurrentUser: Bool = false,
+        lastLoginAt: Date? = nil,
+        lastActiveAt: Date? = nil
     ) {
         self.id = id
         self.displayName = displayName
@@ -179,7 +187,10 @@ struct UserProfile: Identifiable, Codable, Hashable {
         self.followingCount = followingCount
         self.styleInterests = styleInterests
         self.favoriteBrands = favoriteBrands
+        self.colorPalettePreferenceIDs = colorPalettePreferenceIDs
         self.isFollowedByCurrentUser = isFollowedByCurrentUser
+        self.lastLoginAt = lastLoginAt
+        self.lastActiveAt = lastActiveAt
     }
 }
 
@@ -203,6 +214,8 @@ struct ThreadItem: Identifiable, Codable, Hashable {
     var likesCount: Int
     var isLikedByCurrentUser: Bool
     var likedAt: Date?
+    var styleTagIDs: [FashionStyle.ID]
+    var colorPaletteIDs: [FashionColorPalette.ID]
     var createdAt: Date
 
     init(
@@ -217,7 +230,7 @@ struct ThreadItem: Identifiable, Codable, Hashable {
         condition: ItemCondition,
         availabilityStatus: ItemAvailabilityStatus,
         imageName: String,
-        photoAspectRatio: Double = 1.25,
+        photoAspectRatio: Double = ThreadItemPhotoPolicy.fallbackAspectRatio,
         notes: String,
         fitsLike: String = "True to size",
         wherePurchased: String = "Unknown",
@@ -225,6 +238,8 @@ struct ThreadItem: Identifiable, Codable, Hashable {
         likesCount: Int,
         isLikedByCurrentUser: Bool = false,
         likedAt: Date? = nil,
+        styleTagIDs: [FashionStyle.ID] = [],
+        colorPaletteIDs: [FashionColorPalette.ID] = [],
         createdAt: Date = Date()
     ) {
         self.id = id
@@ -238,7 +253,7 @@ struct ThreadItem: Identifiable, Codable, Hashable {
         self.condition = condition
         self.availabilityStatus = availabilityStatus
         self.imageName = imageName
-        self.photoAspectRatio = max(1, photoAspectRatio)
+        self.photoAspectRatio = ThreadItemPhotoPolicy.normalizedAspectRatio(photoAspectRatio)
         self.notes = notes
         self.fitsLike = fitsLike
         self.wherePurchased = wherePurchased
@@ -246,7 +261,67 @@ struct ThreadItem: Identifiable, Codable, Hashable {
         self.likesCount = likesCount
         self.isLikedByCurrentUser = isLikedByCurrentUser
         self.likedAt = likedAt
+        self.styleTagIDs = styleTagIDs
+        self.colorPaletteIDs = colorPaletteIDs
         self.createdAt = createdAt
+    }
+}
+
+struct ThreadItemComment: Identifiable, Codable, Hashable {
+    let id: UUID
+    var itemID: ThreadItem.ID
+    var authorID: UserProfile.ID
+    var body: String
+    var createdAt: Date
+
+    init(
+        id: UUID = UUID(),
+        itemID: ThreadItem.ID,
+        authorID: UserProfile.ID,
+        body: String,
+        createdAt: Date = Date()
+    ) {
+        self.id = id
+        self.itemID = itemID
+        self.authorID = authorID
+        self.body = body
+        self.createdAt = createdAt
+    }
+}
+
+extension UserProfile {
+    var fashionPreferenceSelection: FashionPreferenceSelection {
+        FashionPreferenceSelection(
+            styleIDs: normalizedStyleInterestIDs,
+            favoriteBrands: favoriteBrands,
+            colorPaletteIDs: colorPalettePreferenceIDs
+        )
+    }
+
+    var normalizedStyleInterestIDs: [FashionStyle.ID] {
+        FashionPreferenceCatalog.normalizedStyleIDs(from: styleInterests)
+    }
+
+    var styleInterestDisplayNames: [String] {
+        FashionPreferenceCatalog.displayNames(forStyleIDs: normalizedStyleInterestIDs)
+    }
+
+    var colorPalettePreferenceDisplayNames: [String] {
+        FashionPreferenceCatalog.colorPaletteDisplayNames(for: colorPalettePreferenceIDs)
+    }
+
+    var suggestedBrandNamesFromStyles: [String] {
+        FashionPreferenceCatalog.suggestedBrandNames(forStyleIDs: normalizedStyleInterestIDs)
+    }
+}
+
+extension ThreadItem {
+    var styleTagDisplayNames: [String] {
+        FashionPreferenceCatalog.displayNames(forStyleIDs: styleTagIDs)
+    }
+
+    var colorPaletteDisplayNames: [String] {
+        FashionPreferenceCatalog.colorPaletteDisplayNames(for: colorPaletteIDs)
     }
 }
 
@@ -259,6 +334,7 @@ struct BorrowRequest: Identifiable, Codable, Hashable {
     var requestedStartDate: Date
     var requestedEndDate: Date
     var message: String
+    var borrowerMarkedReturnedAt: Date?
     var createdAt: Date
 
     init(
@@ -270,6 +346,7 @@ struct BorrowRequest: Identifiable, Codable, Hashable {
         requestedStartDate: Date,
         requestedEndDate: Date,
         message: String,
+        borrowerMarkedReturnedAt: Date? = nil,
         createdAt: Date = Date()
     ) {
         self.id = id
@@ -280,6 +357,7 @@ struct BorrowRequest: Identifiable, Codable, Hashable {
         self.requestedStartDate = requestedStartDate
         self.requestedEndDate = requestedEndDate
         self.message = message
+        self.borrowerMarkedReturnedAt = borrowerMarkedReturnedAt
         self.createdAt = createdAt
     }
 }

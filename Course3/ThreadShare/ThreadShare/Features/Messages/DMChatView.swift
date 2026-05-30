@@ -8,17 +8,26 @@
 import SwiftUI
 
 struct DMChatView: View {
+    @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
 
     let owner: UserProfile
     let item: ThreadItem?
 
-    @State private var draftMessage = "Hey! Is this still available to borrow?"
-    @State private var messages: [LocalChatMessage] = [
-        LocalChatMessage(text: "Hey! I saw your closet and loved your style.", isCurrentUser: true),
-        LocalChatMessage(text: "Thank you! Happy to share pieces when they are available.", isCurrentUser: false),
-        LocalChatMessage(text: "Just message me about what you are thinking for dates.", isCurrentUser: false)
-    ]
+    @State private var draftMessage = ""
+
+    private var threadMessages: [DMMessage] {
+        appState.conversationMessages(with: owner.id)
+    }
+
+    private var firstUnreadMessageID: DMMessage.ID? {
+        guard let currentUser = appState.currentUser else { return nil }
+        return threadMessages.first {
+            $0.senderID == owner.id &&
+            $0.recipientID == currentUser.id &&
+            !$0.isRead
+        }?.id
+    }
 
     var body: some View {
         NavigationStack {
@@ -34,7 +43,16 @@ struct DMChatView: View {
                                 itemPreview(item)
                             }
 
-                            ForEach(messages) { message in
+                            if threadMessages.isEmpty {
+                                Text("No messages yet. Start the conversation.")
+                                    .font(AppTheme.bodyFont(size: 14))
+                                    .foregroundStyle(AppTheme.mutedInk)
+                            }
+
+                            ForEach(threadMessages) { message in
+                                if message.id == firstUnreadMessageID {
+                                    unreadDivider
+                                }
                                 messageBubble(message)
                             }
                         }
@@ -52,6 +70,9 @@ struct DMChatView: View {
                     }
                     .fontWeight(.semibold)
                 }
+            }
+            .task(id: owner.id) {
+                appState.markConversationRead(with: owner.id)
             }
         }
     }
@@ -147,25 +168,47 @@ struct DMChatView: View {
         let trimmedMessage = draftMessage.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedMessage.isEmpty else { return }
 
-        messages.append(LocalChatMessage(text: trimmedMessage, isCurrentUser: true))
+        _ = appState.sendDirectMessage(
+            to: owner.id,
+            body: trimmedMessage,
+            itemID: item?.id
+        )
         draftMessage = ""
     }
 
-    private func messageBubble(_ message: LocalChatMessage) -> some View {
-        Text(message.text)
+    private func messageBubble(_ message: DMMessage) -> some View {
+        let isCurrentUser = message.senderID == appState.currentUser?.id
+
+        return Text(message.body)
             .font(AppTheme.bodyFont(size: 15))
-            .foregroundStyle(message.isCurrentUser ? .white : AppTheme.ink)
+            .foregroundStyle(isCurrentUser ? .white : AppTheme.ink)
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
             .background(
-                message.isCurrentUser ? AppTheme.accent : AppTheme.surface,
+                isCurrentUser ? AppTheme.accent : AppTheme.surface,
                 in: RoundedRectangle(cornerRadius: 18, style: .continuous)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(message.isCurrentUser ? .clear : AppTheme.border, lineWidth: 1)
+                    .stroke(isCurrentUser ? .clear : AppTheme.border, lineWidth: 1)
             )
-            .frame(maxWidth: .infinity, alignment: message.isCurrentUser ? .trailing : .leading)
+            .frame(maxWidth: .infinity, alignment: isCurrentUser ? .trailing : .leading)
+    }
+
+    private var unreadDivider: some View {
+        HStack(spacing: 10) {
+            Rectangle()
+                .fill(AppTheme.border)
+                .frame(height: 1)
+            Text("Unread Messages")
+                .font(AppTheme.bodyFont(size: 11).weight(.semibold))
+                .foregroundStyle(AppTheme.softInk)
+                .fixedSize()
+            Rectangle()
+                .fill(AppTheme.border)
+                .frame(height: 1)
+        }
+        .padding(.vertical, 4)
     }
 
     private var trailingToolbarPlacement: ToolbarItemPlacement {
@@ -177,14 +220,9 @@ struct DMChatView: View {
     }
 }
 
-private struct LocalChatMessage: Identifiable {
-    let id = UUID()
-    let text: String
-    let isCurrentUser: Bool
-}
-
 struct DMChatView_Previews: PreviewProvider {
     static var previews: some View {
         DMChatView(owner: SampleData.users[1], item: SampleData.threadItems[0])
+            .environmentObject(AppState())
     }
 }

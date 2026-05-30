@@ -6,13 +6,30 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		A10100000000000000000003 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = A10100000000000000000002 /* Supabase */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		7165C9802FA977CA0032FA87 /* ThreadShare.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ThreadShare.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		717331612FC8057C00AB2909 /* Exceptions for "ThreadShare" folder in "ThreadShare" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 7165C97F2FA977CA0032FA87 /* ThreadShare */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		7165C9822FA977CA0032FA87 /* ThreadShare */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				717331612FC8057C00AB2909 /* Exceptions for "ThreadShare" folder in "ThreadShare" target */,
+			);
 			path = ThreadShare;
 			sourceTree = "<group>";
 		};
@@ -23,6 +40,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A10100000000000000000003 /* Supabase in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,6 +83,7 @@
 			);
 			name = ThreadShare;
 			packageProductDependencies = (
+				A10100000000000000000002 /* Supabase */,
 			);
 			productName = ThreadShare;
 			productReference = 7165C9802FA977CA0032FA87 /* ThreadShare.app */;
@@ -94,6 +113,9 @@
 			);
 			mainGroup = 7165C9772FA977CA0032FA87;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				A10100000000000000000001 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 7165C9812FA977CA0032FA87 /* Products */;
 			projectDirPath = "";
@@ -251,11 +273,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ThreadShare/ThreadShare.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = MGV664U6HH;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ThreadShare/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "ThreadShare uses the camera so you can capture item photos directly.";
 				INFOPLIST_KEY_UIAppFonts = "Inter-VariableFont_opsz,wght.ttf PlayfairDisplay-VariableFont_wght.ttf";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -284,11 +309,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ThreadShare/ThreadShare.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = MGV664U6HH;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ThreadShare/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "ThreadShare uses the camera so you can capture item photos directly.";
 				INFOPLIST_KEY_UIAppFonts = "Inter-VariableFont_opsz,wght.ttf PlayfairDisplay-VariableFont_wght.ttf";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -334,6 +362,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		A10100000000000000000001 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.46.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A10100000000000000000002 /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A10100000000000000000001 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 7165C9782FA977CA0032FA87 /* Project object */;
 }

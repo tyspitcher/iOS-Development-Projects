@@ -6,12 +6,10 @@
 //
 
 import SwiftUI
-#if canImport(UIKit)
-import UIKit
-#endif
 
 struct DiscoverView: View {
     @EnvironmentObject private var appState: AppState
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var isShowingFilters = false
     private let tileSpacing: CGFloat = 14
 
@@ -43,12 +41,16 @@ struct DiscoverView: View {
                                     items: viewModel.filteredItems,
                                     spacing: tileSpacing,
                                     availableWidth: contentWidth,
+                                    columnCount: horizontalSizeClass == .regular ? 3 : 2,
                                     ownerForItem: viewModel.owner(for:),
                                     onDoubleTapLike: viewModel.doubleTapLike
                                 )
                             }
                         }
                         .padding(AppTheme.pagePadding)
+                    }
+                    .refreshable {
+                        await appState.load()
                     }
                 }
             }
@@ -131,18 +133,21 @@ private struct DiscoverMasonryGrid: View {
     let items: [ThreadItem]
     let spacing: CGFloat
     let availableWidth: CGFloat
+    let columnCount: Int
     let ownerForItem: (ThreadItem) -> UserProfile?
     let onDoubleTapLike: (ThreadItem) -> Void
 
     private var tileWidth: CGFloat {
-        max(120, (availableWidth - spacing) / 2)
+        let columns = max(columnCount, 1)
+        let totalSpacing = spacing * CGFloat(max(columns - 1, 0))
+        return max(120, (availableWidth - totalSpacing) / CGFloat(columns))
     }
 
     var body: some View {
         HStack(alignment: .top, spacing: spacing) {
-            ForEach(0..<2, id: \.self) { columnIndex in
+            ForEach(0..<max(columnCount, 1), id: \.self) { columnIndex in
                 LazyVStack(spacing: spacing) {
-                    ForEach(columnItems(columnIndex)) { item in
+                    ForEach(columnItems[columnIndex]) { item in
                         NavigationLink {
                             ThreadItemDetailView(item: item)
                         } label: {
@@ -165,13 +170,22 @@ private struct DiscoverMasonryGrid: View {
                 .clipped()
             }
         }
-        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .frame(width: availableWidth, alignment: .topLeading)
     }
 
-    private func columnItems(_ column: Int) -> [ThreadItem] {
-        items.enumerated().compactMap { index, item in
-            index % 2 == column ? item : nil
+    private var columnItems: [[ThreadItem]] {
+        let columns = max(columnCount, 1)
+        var distributed = Array(repeating: [ThreadItem](), count: columns)
+        var heights = Array(repeating: CGFloat.zero, count: columns)
+
+        for item in items {
+            guard let targetColumn = heights.enumerated().min(by: { $0.element < $1.element })?.offset else {
+                continue
+            }
+            distributed[targetColumn].append(item)
+            heights[targetColumn] += tileWidth * ThreadItemImageSizing.heightRatio(for: item) + spacing
         }
+        return distributed
     }
 }
 
@@ -187,12 +201,7 @@ private struct DiscoverItemTile: View {
     }
 
     var body: some View {
-        ZStack {
-            tileShape
-                .fill(AppTheme.surface)
-
-            TileImageFallback(item: item)
-        }
+        TileImageFallback(item: item)
             .frame(width: tileWidth, height: tileHeight)
             .clipShape(tileShape)
             .background {
@@ -202,11 +211,17 @@ private struct DiscoverItemTile: View {
             }
             .overlay(
                 tileShape
-                    .stroke(AppTheme.border, lineWidth: 1)
+                    .stroke(AppTheme.strongBorder, lineWidth: 1)
             )
             .overlay(alignment: .bottomLeading) {
                 imageDock
                     .padding(10)
+            }
+            .overlay(alignment: .topLeading) {
+                if item.isRecentlyAdded {
+                    RecentlyAddedBadge()
+                        .padding(10)
+                }
             }
             .contentShape(tileShape)
             .accessibilityLabel("\(item.title), tap for details")
@@ -245,6 +260,32 @@ struct TileImageFallback: View {
     let item: ThreadItem
 
     var body: some View {
+        if let imageURL = ThreadItemImageStore.imageURL(for: item.imageName) {
+            AsyncImage(url: imageURL) { phase in
+                switch phase {
+                case .empty:
+                    placeholder
+                case let .success(image):
+                    image
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                case .failure:
+                    placeholder
+                @unknown default:
+                    placeholder
+                }
+            }
+        } else {
+            Image(item.imageName)
+                .resizable()
+                .scaledToFit()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .accessibilityLabel("\(item.title) image")
+        }
+    }
+
+    private var placeholder: some View {
         ZStack {
             LinearGradient(
                 colors: [
@@ -259,13 +300,6 @@ struct TileImageFallback: View {
             Image(systemName: iconName)
                 .font(.system(size: 48, weight: .light))
                 .foregroundStyle(.white.opacity(0.9))
-
-            if let uiImage = ThreadItemImageStore.uiImage(named: item.imageName) {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
         }
         .accessibilityLabel("\(item.title) image")
     }

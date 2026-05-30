@@ -39,7 +39,23 @@ struct BorrowView: View {
                                 row(for: request, personRole: .owner)
                             }
 
+                            BorrowSection(
+                                title: "Awaiting Owner Confirmation",
+                                requests: viewModel.awaitingOwnerConfirmationAsBorrower,
+                                emptyMessage: "No returns waiting for owner confirmation."
+                            ) { request in
+                                row(for: request, personRole: .owner)
+                            }
+
                             BorrowSection(title: "Lending Out", requests: viewModel.lendingOut, emptyMessage: "No one is borrowing from your closet yet.") { request in
+                                row(for: request, personRole: .borrower)
+                            }
+
+                            BorrowSection(
+                                title: "Return Confirmations Needed",
+                                requests: viewModel.returnConfirmationsNeededAsOwner,
+                                emptyMessage: "No borrower-marked returns need your confirmation."
+                            ) { request in
                                 row(for: request, personRole: .borrower)
                             }
                         }
@@ -83,11 +99,25 @@ struct BorrowView: View {
             item: item,
             personName: personName,
             personRole: personRole,
+            reminder: viewModel.reminder(for: request),
+            now: Date(),
             onOpenItem: item.map { tappedItem in
                 { selectedItem = tappedItem }
             },
-            onMarkReturned: viewModel.canMarkReturned(request)
-                ? { viewModel.markReturned(request) }
+            onMarkReturnedByBorrower: viewModel.canMarkReturnedByBorrower(request)
+                ? { viewModel.markReturnedByBorrower(request) }
+                : nil,
+            onConfirmReturnedByOwner: viewModel.canConfirmReturnedByOwner(request)
+                ? { viewModel.confirmReturnedByOwner(request) }
+                : nil,
+            onApproveRequest: viewModel.canApproveOrDecline(request)
+                ? { viewModel.approveRequest(request) }
+                : nil,
+            onDeclineRequest: viewModel.canApproveOrDecline(request)
+                ? { viewModel.declineRequest(request) }
+                : nil,
+            onSetReminder: viewModel.canSetReminder(request)
+                ? { cadence in viewModel.setReminder(cadence, for: request) }
                 : nil
         )
     }
@@ -130,8 +160,14 @@ private struct BorrowRequestRow: View {
     let item: ThreadItem?
     let personName: String
     let personRole: BorrowPersonRole
+    let reminder: BorrowReturnReminder?
+    let now: Date
     var onOpenItem: (() -> Void)?
-    var onMarkReturned: (() -> Void)?
+    var onMarkReturnedByBorrower: (() -> Void)?
+    var onConfirmReturnedByOwner: (() -> Void)?
+    var onApproveRequest: (() -> Void)?
+    var onDeclineRequest: (() -> Void)?
+    var onSetReminder: ((ReturnReminderCadence?) -> Void)?
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -168,9 +204,33 @@ private struct BorrowRequestRow: View {
                         .padding(.top, 2)
                 }
 
-                if let onMarkReturned {
-                    PrimaryButton(title: "Mark Returned", systemImage: "arrow.uturn.backward.circle.fill") {
-                        onMarkReturned()
+                if let onSetReminder {
+                    reminderMenu(onSetReminder: onSetReminder)
+                }
+
+                if let onApproveRequest, let onDeclineRequest {
+                    HStack(spacing: 10) {
+                        SecondaryButton(title: "Decline", systemImage: "xmark.circle.fill") {
+                            onDeclineRequest()
+                        }
+
+                        PrimaryButton(title: "Approve", systemImage: "checkmark.circle.fill") {
+                            onApproveRequest()
+                        }
+                    }
+                    .padding(.top, 2)
+                }
+
+                if let onMarkReturnedByBorrower {
+                    SecondaryButton(title: "I Returned This Item", systemImage: "arrow.uturn.backward.circle.fill") {
+                        onMarkReturnedByBorrower()
+                    }
+                    .padding(.top, 2)
+                }
+
+                if let onConfirmReturnedByOwner {
+                    PrimaryButton(title: "Confirm Returned", systemImage: "checkmark.seal.fill") {
+                        onConfirmReturnedByOwner()
                     }
                     .padding(.top, 2)
                 }
@@ -205,23 +265,59 @@ private struct BorrowRequestRow: View {
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.smallCornerRadius, style: .continuous))
     }
 
-    private var reminderText: String? {
-        switch request.status {
-        case .pending:
-            "Follow-up reminder set"
-        case .approved:
-            "Return reminder set"
-        case .declined:
-            nil
-        case .returned:
-            "Returned"
+    private func reminderMenu(onSetReminder: @escaping (ReturnReminderCadence?) -> Void) -> some View {
+        Menu {
+            Button("One-Time Reminder") {
+                onSetReminder(.oneTime)
+            }
+
+            Button("Daily Reminder") {
+                onSetReminder(.daily)
+            }
+
+            if reminder != nil {
+                Button("Turn Off Reminder", role: .destructive) {
+                    onSetReminder(nil)
+                }
+            }
+        } label: {
+            Label(reminderMenuTitle, systemImage: "bell.badge")
+                .font(AppTheme.bodyFont(size: 13).weight(.semibold))
+                .foregroundStyle(AppTheme.ink)
+                .frame(maxWidth: .infinity)
+                .frame(height: 38)
+                .background(AppTheme.background, in: RoundedRectangle(cornerRadius: AppTheme.smallCornerRadius, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.smallCornerRadius, style: .continuous)
+                        .stroke(AppTheme.border, lineWidth: 1)
+                )
         }
+        .padding(.top, 2)
+    }
+
+    private var reminderMenuTitle: String {
+        guard let reminder else { return "Set Return Reminder" }
+        return "\(reminder.cadence.displayName) Reminder"
+    }
+
+    private var reminderText: String? {
+        if request.status == .returnPendingOwnerConfirmation {
+            let timestamp = request.borrowerMarkedReturnedAt ?? request.createdAt
+            let components = Calendar.current.dateComponents([.day], from: timestamp, to: now)
+            let days = max(0, components.day ?? 0)
+            return days == 0
+                ? "Marked returned today. Waiting for owner confirmation."
+                : "Marked returned \(days) day\(days == 1 ? "" : "s") ago. Waiting for owner confirmation."
+        }
+        guard let reminder else { return request.status == .returned ? "Returned" : nil }
+        return "Next reminder \(reminder.nextReminderAt.formatted(date: .abbreviated, time: .shortened))"
     }
 
     private var statusColor: Color {
         switch request.status {
         case .pending: AppTheme.clay
         case .approved: AppTheme.moss
+        case .returnPendingOwnerConfirmation: AppTheme.accent
         case .declined: AppTheme.softInk
         case .returned: AppTheme.accent
         }
@@ -231,6 +327,7 @@ private struct BorrowRequestRow: View {
         switch request.status {
         case .pending: "clock.fill"
         case .approved: "checkmark.circle.fill"
+        case .returnPendingOwnerConfirmation: "hourglass.badge.exclamationmark"
         case .declined: "xmark.circle.fill"
         case .returned: "arrow.uturn.backward.circle.fill"
         }

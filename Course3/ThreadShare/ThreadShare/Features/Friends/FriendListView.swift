@@ -82,7 +82,10 @@ struct FriendListView: View {
                             HStack(spacing: 12) {
                                 FriendRow(user: user)
                                 Spacer(minLength: 0)
-                                FriendStatusPill(title: "Requested", systemImage: "clock.fill")
+                                FriendStatusPill(
+                                    title: viewModel.statusTitle(for: user),
+                                    systemImage: viewModel.statusIcon(for: user)
+                                )
                             }
                         }
                     }
@@ -149,18 +152,7 @@ struct FriendListView: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
 
-                        Button {
-                            appState.sendFriendRequest(to: user.id)
-                            requestMessage = viewModel.requestSentMessage(for: user)
-                        } label: {
-                            Label("Add", systemImage: "person.badge.plus")
-                                .font(AppTheme.bodyFont(size: 13))
-                                .foregroundStyle(AppTheme.accent)
-                                .padding(.horizontal, 11)
-                                .frame(height: 34)
-                                .background(AppTheme.accentSoft, in: Capsule())
-                        }
-                        .buttonStyle(.plain)
+                        searchResultAction(for: user)
                     }
                     .padding(10)
                     .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: AppTheme.smallCornerRadius, style: .continuous))
@@ -170,6 +162,50 @@ struct FriendListView: View {
                     )
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private func searchResultAction(for user: UserProfile) -> some View {
+        switch viewModel.connectionState(for: user) {
+        case .addFriend:
+            Button {
+                appState.sendFriendRequest(to: user.id)
+                requestMessage = viewModel.requestSentMessage(for: user)
+            } label: {
+                Label("Add Friend", systemImage: "person.badge.plus")
+                    .font(AppTheme.bodyFont(size: 13))
+                    .foregroundStyle(AppTheme.accent)
+                    .padding(.horizontal, 11)
+                    .frame(height: 34)
+                    .background(AppTheme.accentSoft, in: Capsule())
+            }
+            .buttonStyle(.plain)
+
+        case .requested, .friends:
+            FriendStatusPill(
+                title: viewModel.statusTitle(for: user),
+                systemImage: viewModel.statusIcon(for: user)
+            )
+
+        case .incomingRequest:
+            VStack(alignment: .trailing, spacing: 8) {
+                FriendStatusPill(
+                    title: viewModel.statusTitle(for: user),
+                    systemImage: viewModel.statusIcon(for: user)
+                )
+
+                HStack(spacing: 8) {
+                    SecondaryButton(title: "", systemImage: "xmark") {
+                        appState.denyFriendRequest(from: user.id)
+                    }
+                    SecondaryButton(title: "", systemImage: "checkmark") {
+                        appState.approveFriendRequest(from: user.id)
+                    }
+                }
+            }
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("Incoming friend request actions")
         }
     }
 }
@@ -213,6 +249,9 @@ private struct FriendStatusPill: View {
 
 struct UserProfileDetailView: View {
     @EnvironmentObject private var appState: AppState
+    @Environment(\.dismiss) private var dismiss
+    @State private var isShowingBlockConfirmation = false
+    @State private var isShowingBlockCompleted = false
     let user: UserProfile
 
     private var viewModel: FriendListViewModel {
@@ -349,28 +388,76 @@ struct UserProfileDetailView: View {
         .background(AppTheme.background.ignoresSafeArea())
         .navigationTitle("Profile")
         .navigationBarTitleDisplayMode(.inline)
+        .alert("Block user?", isPresented: $isShowingBlockConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button("Block User", role: .destructive) {
+                if appState.blockUser(user.id) {
+                    isShowingBlockCompleted = true
+                }
+            }
+        } message: {
+            Text("Blocking limits visibility and interactions in ThreadShare. Their items will be hidden from your feed, and they will no longer appear in friend search where practical.")
+        }
+        .alert("User blocked", isPresented: $isShowingBlockCompleted) {
+            Button("OK", role: .cancel) {
+                dismiss()
+            }
+        } message: {
+            Text("This user’s content and social surfaces will be limited in ThreadShare.")
+        }
     }
 
     @ViewBuilder
     private var profileRelationshipAction: some View {
-        if user.relationship == .friend {
-            FriendStatusPill(title: "Friends", systemImage: "person.2.fill")
-        } else if appState.hasSentFriendRequest(to: user.id) {
-            FriendStatusPill(title: "Request Sent", systemImage: "clock.fill")
-        } else if appState.hasIncomingFriendRequest(from: user.id) {
-            HStack(spacing: 10) {
-                SecondaryButton(title: "Decline", systemImage: "xmark") {
-                    appState.denyFriendRequest(from: user.id)
+        VStack(alignment: .leading, spacing: 10) {
+            switch viewModel.connectionState(for: user) {
+            case .friends:
+                FriendStatusPill(
+                    title: viewModel.statusTitle(for: user),
+                    systemImage: viewModel.statusIcon(for: user)
+                )
+            case .requested:
+                FriendStatusPill(
+                    title: viewModel.statusTitle(for: user),
+                    systemImage: viewModel.statusIcon(for: user)
+                )
+            case .incomingRequest:
+                HStack(spacing: 10) {
+                    SecondaryButton(title: "Decline", systemImage: "xmark") {
+                        appState.denyFriendRequest(from: user.id)
+                    }
+                    PrimaryButton(title: "Approve", systemImage: "checkmark") {
+                        appState.approveFriendRequest(from: user.id)
+                    }
                 }
-                PrimaryButton(title: "Approve", systemImage: "checkmark") {
-                    appState.approveFriendRequest(from: user.id)
+            case .addFriend:
+                PrimaryButton(title: "Request Friend", systemImage: "person.badge.plus") {
+                    appState.sendFriendRequest(to: user.id)
                 }
             }
-        } else {
-            PrimaryButton(title: "Request Friend", systemImage: "person.badge.plus") {
-                appState.sendFriendRequest(to: user.id)
+
+            if appState.canBlockUser(user.id) {
+                blockUserButton
             }
         }
+    }
+
+    private var blockUserButton: some View {
+        Button(role: .destructive) {
+            isShowingBlockConfirmation = true
+        } label: {
+            Label("Block User", systemImage: "hand.raised.fill")
+                .font(AppTheme.bodyFont(size: 15))
+                .foregroundStyle(.red)
+                .frame(maxWidth: .infinity)
+                .frame(height: 46)
+                .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: AppTheme.smallCornerRadius, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.smallCornerRadius, style: .continuous)
+                        .stroke(.red.opacity(0.28), lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
     }
 }
 

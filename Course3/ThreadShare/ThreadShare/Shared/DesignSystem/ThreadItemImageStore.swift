@@ -6,16 +6,10 @@
 //
 
 import Foundation
-#if canImport(UIKit)
-import UIKit
-#endif
 
 enum ThreadItemImageStore {
     static let localPrefix = "local://"
     private static let folderName = "threadshare-item-images"
-    #if canImport(UIKit)
-    private static var cache: [String: UIImage] = [:]
-    #endif
 
     static func makeLocalImageName(fileName: String) -> String {
         localPrefix + fileName
@@ -34,27 +28,32 @@ enum ThreadItemImageStore {
         return makeLocalImageName(fileName: fileName)
     }
 
-    #if canImport(UIKit)
-    static func uiImage(named imageName: String) -> UIImage? {
-        if let cached = cache[imageName] {
-            return cached
+    static func deleteImage(named imageName: String) throws {
+        guard let localFileName = localFileName(from: imageName) else { return }
+        let fileURL = try localFileURL(fileName: localFileName)
+        if FileManager.default.fileExists(atPath: fileURL.path) {
+            try FileManager.default.removeItem(at: fileURL)
         }
-
-        if let localFileName = localFileName(from: imageName),
-           let fileURL = try? localFileURL(fileName: localFileName),
-           let image = UIImage(contentsOfFile: fileURL.path) {
-            cache[imageName] = image
-            return image
-        }
-
-        if let assetImage = UIImage(named: imageName) {
-            cache[imageName] = assetImage
-            return assetImage
-        }
-
-        return nil
     }
-    #endif
+
+    static func publicItemImageURL(for imageName: String) -> URL? {
+        guard imageName.isEmpty == false else { return nil }
+        guard imageName.hasPrefix(localPrefix) == false else { return nil }
+        guard imageName.contains("/") else { return nil }
+        return URL(string: "\(SupabaseConfig.projectURL.absoluteString)/storage/v1/object/public/item-images/\(imageName)")
+    }
+
+    static func localImageURL(for imageName: String) -> URL? {
+        guard let localFileName = localFileName(from: imageName) else { return nil }
+        return try? localFileURL(fileName: localFileName)
+    }
+
+    static func imageURL(for imageName: String) -> URL? {
+        if let localURL = localImageURL(for: imageName) {
+            return localURL
+        }
+        return publicItemImageURL(for: imageName)
+    }
 
     private static func localFileURL(fileName: String) throws -> URL {
         let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
