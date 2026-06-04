@@ -154,6 +154,7 @@ struct UserProfile: Identifiable, Codable, Hashable {
     var favoriteBrands: [String]
     var colorPalettePreferenceIDs: [FashionColorPalette.ID]
     var isFollowedByCurrentUser: Bool
+    var requiresFollowerApproval: Bool
     var lastLoginAt: Date?
     var lastActiveAt: Date?
 
@@ -172,6 +173,7 @@ struct UserProfile: Identifiable, Codable, Hashable {
         favoriteBrands: [String] = [],
         colorPalettePreferenceIDs: [FashionColorPalette.ID] = [],
         isFollowedByCurrentUser: Bool = false,
+        requiresFollowerApproval: Bool = false,
         lastLoginAt: Date? = nil,
         lastActiveAt: Date? = nil
     ) {
@@ -189,6 +191,7 @@ struct UserProfile: Identifiable, Codable, Hashable {
         self.favoriteBrands = favoriteBrands
         self.colorPalettePreferenceIDs = colorPalettePreferenceIDs
         self.isFollowedByCurrentUser = isFollowedByCurrentUser
+        self.requiresFollowerApproval = requiresFollowerApproval
         self.lastLoginAt = lastLoginAt
         self.lastActiveAt = lastActiveAt
     }
@@ -391,6 +394,19 @@ struct DMMessage: Identifiable, Codable, Hashable {
 }
 
 struct FriendRequestState: Codable, Hashable {
+    var outgoingUserIDs: Set<UserProfile.ID>
+    var incomingUserIDs: Set<UserProfile.ID>
+
+    init(
+        outgoingUserIDs: Set<UserProfile.ID> = [],
+        incomingUserIDs: Set<UserProfile.ID> = []
+    ) {
+        self.outgoingUserIDs = outgoingUserIDs
+        self.incomingUserIDs = incomingUserIDs
+    }
+}
+
+struct FollowRequestState: Codable, Hashable {
     var outgoingUserIDs: Set<UserProfile.ID>
     var incomingUserIDs: Set<UserProfile.ID>
 

@@ -13,10 +13,6 @@ struct ThreadShareApp: App {
     @StateObject private var pushPermissionManager = PushNotificationPermissionManager()
     @UIApplicationDelegateAdaptor(ThreadShareAppDelegate.self) private var appDelegate
 
-    init() {
-        ThreadShareFontRegistrar.registerFonts()
-    }
-
     var body: some Scene {
         WindowGroup {
             ThreadShareRootView()

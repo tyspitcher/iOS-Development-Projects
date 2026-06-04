@@ -22,6 +22,7 @@ begin
         'push_device_tokens',
         'return_reminders',
         'follows',
+        'follow_requests',
         'friend_requests',
         'user_blocks',
         'reports',

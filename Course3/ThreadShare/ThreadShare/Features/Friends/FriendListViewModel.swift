@@ -26,6 +26,10 @@ struct FriendListViewModel {
         appState.incomingFriendRequests
     }
 
+    var incomingFollowRequests: [UserProfile] {
+        appState.incomingFollowRequests
+    }
+
     func requestSentMessage(for user: UserProfile) -> String {
         "Request sent to \(user.displayName). They'll be added once approved."
     }
@@ -44,6 +48,32 @@ struct FriendListViewModel {
 
     func connectionState(for user: UserProfile) -> FriendConnectionState {
         appState.friendConnectionState(for: user.id)
+    }
+
+    func followConnectionState(for user: UserProfile) -> FollowConnectionState {
+        appState.followConnectionState(for: user.id)
+    }
+
+    func followStatusTitle(for user: UserProfile) -> String {
+        switch followConnectionState(for: user) {
+        case .follow:
+            return "Follow"
+        case .requested:
+            return "Follow Requested"
+        case .following:
+            return "Following"
+        }
+    }
+
+    func followStatusIcon(for user: UserProfile) -> String {
+        switch followConnectionState(for: user) {
+        case .follow:
+            return "plus.circle"
+        case .requested:
+            return "clock.fill"
+        case .following:
+            return "checkmark.circle.fill"
+        }
     }
 
     func statusTitle(for user: UserProfile) -> String {

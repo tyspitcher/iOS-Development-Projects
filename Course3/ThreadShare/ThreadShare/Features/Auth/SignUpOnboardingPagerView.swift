@@ -123,7 +123,7 @@ struct SignUpOnboardingPagerView: View {
                 Spacer()
 
                 Text("\(pageIndex + 1) / \(pageCount)")
-                    .font(AppTheme.bodyFont(size: 12).weight(.semibold))
+                    .font(AppTheme.bodyFont(size: 12, weight: .semibold))
                     .foregroundStyle(AppTheme.accent)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
@@ -263,7 +263,7 @@ struct SignUpOnboardingPagerView: View {
                     .id(FieldKind.customBrand)
 
                 Button("Add", action: addCustomBrand)
-                    .font(AppTheme.bodyFont(size: 14).weight(.semibold))
+                    .font(AppTheme.bodyFont(size: 14, weight: .semibold))
                     .foregroundStyle(customBrandEntry.trimmed.isEmpty ? AppTheme.softInk : AppTheme.ink)
                     .frame(width: 64, height: 44)
                     .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: AppTheme.smallCornerRadius, style: .continuous))
@@ -296,7 +296,7 @@ struct SignUpOnboardingPagerView: View {
                 Button("Use generated avatar") {
                     avatarImageData = nil
                 }
-                .font(AppTheme.bodyFont(size: 13).weight(.semibold))
+                .font(AppTheme.bodyFont(size: 13, weight: .semibold))
                 .foregroundStyle(AppTheme.accent)
                 .frame(minHeight: 44, alignment: .leading)
                 .buttonStyle(.plain)
@@ -316,7 +316,7 @@ struct SignUpOnboardingPagerView: View {
             Button("Random color") {
                 avatarFallbackColorHex = avatarColorHexes.randomElement()
             }
-            .font(AppTheme.bodyFont(size: 13).weight(.semibold))
+            .font(AppTheme.bodyFont(size: 13, weight: .semibold))
             .foregroundStyle(AppTheme.accent)
             .buttonStyle(.plain)
 
@@ -327,7 +327,7 @@ struct SignUpOnboardingPagerView: View {
 
             if let selectedFallbackColorHex {
                 Text("Selected color: #\(selectedFallbackColorHex)")
-                    .font(AppTheme.bodyFont(size: 12).weight(.semibold))
+                    .font(AppTheme.bodyFont(size: 12, weight: .semibold))
                     .foregroundStyle(AppTheme.softInk)
             }
         }
@@ -341,7 +341,7 @@ struct SignUpOnboardingPagerView: View {
                 }
             } label: {
                 Text("Back")
-                    .font(AppTheme.bodyFont(size: 15).weight(.semibold))
+                    .font(AppTheme.bodyFont(size: 15, weight: .semibold))
                     .foregroundStyle(pageIndex == 0 ? AppTheme.softInk : AppTheme.ink)
                     .frame(maxWidth: .infinity, minHeight: 46)
                     .background(AppTheme.background, in: RoundedRectangle(cornerRadius: AppTheme.smallCornerRadius, style: .continuous))
@@ -364,7 +364,7 @@ struct SignUpOnboardingPagerView: View {
                 }
             } label: {
                 Text(pageIndex == pageCount - 1 ? "Create Account" : "Next")
-                    .font(AppTheme.bodyFont(size: 15).weight(.semibold))
+                    .font(AppTheme.bodyFont(size: 15, weight: .semibold))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity, minHeight: 46)
                     .background(nextButtonBackground, in: RoundedRectangle(cornerRadius: AppTheme.smallCornerRadius, style: .continuous))
@@ -397,12 +397,12 @@ struct SignUpOnboardingPagerView: View {
 
                 if isRequired {
                     Text("*")
-                        .font(AppTheme.bodyFont(size: 13).weight(.semibold))
+                        .font(AppTheme.bodyFont(size: 13, weight: .semibold))
                         .foregroundStyle(.red)
                         .accessibilityHidden(true)
                 } else {
-                    Text("Optional")
-                        .font(AppTheme.bodyFont(size: 11).weight(.semibold))
+                        Text("Optional")
+                            .font(AppTheme.bodyFont(size: 11, weight: .semibold))
                         .foregroundStyle(AppTheme.softInk)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
@@ -495,7 +495,7 @@ struct SignUpOnboardingPagerView: View {
     private func infoBanner(title: String, message: String) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
-                .font(AppTheme.bodyFont(size: 13).weight(.semibold))
+                .font(AppTheme.bodyFont(size: 13, weight: .semibold))
                 .foregroundStyle(AppTheme.ink)
 
             Text(message)

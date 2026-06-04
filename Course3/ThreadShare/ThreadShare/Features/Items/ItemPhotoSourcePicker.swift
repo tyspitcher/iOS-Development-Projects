@@ -37,7 +37,7 @@ struct ItemPhotoSourcePicker: View {
             if let previewImageData {
                 DataBackedImageView(data: previewImageData, contentMode: .fit)
                     .frame(maxWidth: .infinity)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: 19, style: .continuous))
             }
 
             Text("Take a new photo or choose one from your library.")

@@ -16,6 +16,7 @@ final class EditProfileViewModel: ObservableObject {
     @Published var bio: String
     @Published var visibility: ProfileVisibility
     @Published var isClosetPublic: Bool
+    @Published var requiresFollowerApproval: Bool
     @Published var avatarImageName: String
     @Published var preferenceSelection: FashionPreferenceSelection
     @Published var customBrandEntry = ""
@@ -34,6 +35,7 @@ final class EditProfileViewModel: ObservableObject {
         bio = user.bio
         visibility = user.visibility
         isClosetPublic = user.visibility == .publicProfile
+        requiresFollowerApproval = user.requiresFollowerApproval
         avatarImageName = user.avatarImageName
         preferenceSelection = user.fashionPreferenceSelection
     }
@@ -59,6 +61,7 @@ final class EditProfileViewModel: ObservableObject {
         user.bio = bio.trimmed
         user.avatarImageName = avatarImageName
         user.visibility = visibility
+        user.requiresFollowerApproval = requiresFollowerApproval
         user.styleInterests = preferenceSelection.styleIDs
         user.favoriteBrands = preferenceSelection.favoriteBrands
         user.colorPalettePreferenceIDs = preferenceSelection.colorPaletteIDs

@@ -10,6 +10,15 @@ ThreadShare has the app-side account deletion request flow in place:
 This document is the production implementation guide for the server-side processor that
 finishes the 14-day deletion after the grace period expires.
 
+## Current Status
+
+- The processor function is deployed in staging and production.
+- Production currently has a scheduled dry-run job named
+  `process-account-deletions-dry-run-hourly`.
+- That job runs at `7 * * * *` and calls the function with `dryRun: true`, so it
+  validates the pipeline without deleting accounts yet.
+- A live destructive schedule is still pending.
+
 Useful Supabase references:
 
 - Edge Functions: https://supabase.com/docs/guides/functions

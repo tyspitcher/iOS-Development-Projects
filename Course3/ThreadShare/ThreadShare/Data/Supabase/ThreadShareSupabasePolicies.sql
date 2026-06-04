@@ -221,6 +221,12 @@ create policy "Users can read their own follows"
     to authenticated
     using (auth.uid() = follower_id);
 
+create policy "Users can read followers on their profile"
+    on public.follows
+    for select
+    to authenticated
+    using (auth.uid() = followed_user_id);
+
 create policy "Users can follow others as themselves"
     on public.follows
     for insert
@@ -232,6 +238,31 @@ create policy "Users can unfollow their own follows"
     for delete
     to authenticated
     using (auth.uid() = follower_id);
+
+create policy "Users can remove followers from their profile"
+    on public.follows
+    for delete
+    to authenticated
+    using (auth.uid() = followed_user_id);
+
+-- Follow requests
+create policy "Users can read follow requests they sent or received"
+    on public.follow_requests
+    for select
+    to authenticated
+    using (auth.uid() = requester_id or auth.uid() = recipient_id);
+
+create policy "Users can create follow requests from their account"
+    on public.follow_requests
+    for insert
+    to authenticated
+    with check (auth.uid() = requester_id);
+
+create policy "Senders or recipients can delete their follow requests"
+    on public.follow_requests
+    for delete
+    to authenticated
+    using (auth.uid() = requester_id or auth.uid() = recipient_id);
 
 -- Friend requests
 create policy "Users can read friend requests they sent or received"

@@ -58,6 +58,8 @@ struct ThreadShareRootView: View {
     @EnvironmentObject private var pushPermissionManager: PushNotificationPermissionManager
     @AppStorage(AppMode.demoModeStorageKey) private var demoModeEnabled = false
     @AppStorage(AppearanceMode.storageKey) private var appearanceModeRaw = AppearanceMode.system.rawValue
+    @State private var hasCheckedPushAuthorization = false
+    @State private var isShowingNotificationPrompt = false
 
     var body: some View {
         Group {
@@ -87,9 +89,21 @@ struct ThreadShareRootView: View {
                 }
             }
         }
+        .sheet(isPresented: $isShowingNotificationPrompt) {
+            NotificationPermissionPromptView {
+                Task {
+                    await pushPermissionManager.requestAuthorizationAndRegister()
+                    sessionStore.completeOnboarding()
+                    isShowingNotificationPrompt = false
+                }
+            }
+            .presentationDetents([.medium])
+        }
         .preferredColorScheme(AppearanceMode(rawValue: appearanceModeRaw)?.preferredColorScheme)
         .task {
             await pushPermissionManager.refreshAuthorizationStatus()
+            hasCheckedPushAuthorization = true
+            updateNotificationPromptVisibility()
         }
         .task(id: sessionStore.session?.userID) {
             if let session = sessionStore.session, let token = PushDeviceTokenStore.currentToken {
@@ -108,17 +122,39 @@ struct ThreadShareRootView: View {
                 try? await SupabasePushNotificationService(session: session).registerDeviceToken(token)
             }
         }
+        .onChange(of: sessionStore.pendingOnboardingDraft) { _, _ in
+            updateNotificationPromptVisibility()
+        }
+        .onChange(of: pushPermissionManager.authorizationStatus) { _, _ in
+            updateNotificationPromptVisibility()
+        }
     }
     
     private var restoringView: some View {
         ZStack {
             AppTheme.background.ignoresSafeArea()
-            VStack(spacing: 14) {
+            VStack(spacing: AppTheme.tightSpacing) {
                 ProgressView()
                 Text("Opening ThreadShare")
-                    .font(AppTheme.bodyFont(size: 15))
+                    .font(AppTheme.bodyFont(size: 15, weight: .medium))
                     .foregroundStyle(AppTheme.mutedInk)
             }
+        }
+    }
+
+    private func updateNotificationPromptVisibility() {
+        guard hasCheckedPushAuthorization else { return }
+
+        guard sessionStore.pendingOnboardingDraft != nil else {
+            isShowingNotificationPrompt = false
+            return
+        }
+
+        if pushPermissionManager.authorizationStatus == .notDetermined {
+            isShowingNotificationPrompt = true
+        } else {
+            sessionStore.completeOnboarding()
+            isShowingNotificationPrompt = false
         }
     }
 }
@@ -137,7 +173,7 @@ private struct MainAppContainerView: View {
         isDemoMode: Bool = false,
         onExitDemoMode: (() -> Void)? = nil
     ) {
-        let appState = AppState(repository: repository)
+        let appState = AppState(repository: repository, isDemoMode: isDemoMode)
         _appState = StateObject(wrappedValue: appState)
         _realtimeSyncService = StateObject(
             wrappedValue: SupabaseRealtimeSyncService { [appState] in
@@ -201,7 +237,7 @@ private struct MainAppContainerView: View {
             if isDemoMode, let onExitDemoMode {
                 Button(action: onExitDemoMode) {
                     Label("Exit Demo", systemImage: "arrow.uturn.backward.circle.fill")
-                        .font(AppTheme.bodyFont(size: 13).weight(.semibold))
+                        .font(AppTheme.bodyFont(size: 13, weight: .semibold))
                         .foregroundStyle(AppTheme.ink)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 10)
@@ -211,9 +247,60 @@ private struct MainAppContainerView: View {
                                 .stroke(AppTheme.border, lineWidth: 1)
                         )
                 }
-                .padding(.top, 12)
-                .padding(.trailing, 12)
+                .padding(.top, AppTheme.tightSpacing)
+                .padding(.trailing, AppTheme.tightSpacing)
             }
+        }
+    }
+}
+
+private struct NotificationPermissionPromptView: View {
+    let continueAction: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                AppTheme.background.ignoresSafeArea()
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: AppTheme.sectionSpacing) {
+                        VStack(alignment: .leading, spacing: AppTheme.compactSpacing) {
+                            Text("Turn on notifications")
+                                .font(AppTheme.titleFont(size: 28))
+                                .foregroundStyle(AppTheme.ink)
+
+                            Text("ThreadShare uses notifications to keep you updated on borrow requests, new comments, messages, and new items added to a friend’s closet.")
+                                .font(AppTheme.bodyFont(size: 15))
+                                .foregroundStyle(AppTheme.mutedInk)
+                        }
+
+                        VStack(alignment: .leading, spacing: AppTheme.tightSpacing) {
+                            onboardingBullet(text: "You’ll first see a system popup asking for notification access.")
+                            onboardingBullet(text: "Tap Allow so ThreadShare can send the alerts you chose in Settings.")
+                            onboardingBullet(text: "You can change these preferences later in Notification Center.")
+                        }
+
+                        PrimaryButton(title: "Continue", systemImage: "bell.badge.fill", action: continueAction)
+                    }
+                    .padding(AppTheme.pagePadding)
+                }
+            }
+            .navigationTitle("Notifications")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+
+    private func onboardingBullet(text: String) -> some View {
+        HStack(alignment: .top, spacing: AppTheme.tightSpacing) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(AppTheme.captionFont(size: 15, weight: .semibold))
+                .foregroundStyle(AppTheme.accent)
+                .frame(width: 22)
+
+            Text(text)
+                .font(AppTheme.bodyFont(size: 14))
+                .foregroundStyle(AppTheme.ink)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }

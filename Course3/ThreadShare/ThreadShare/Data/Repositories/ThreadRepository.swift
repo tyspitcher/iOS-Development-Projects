@@ -20,9 +20,11 @@ protocol ThreadRepository {
     func fetchBorrowRequests() async throws -> [BorrowRequest]
     func fetchMessages() async throws -> [DMMessage]
     func fetchFriendRequestState() async throws -> FriendRequestState
+    func fetchFollowRequestState() async throws -> FollowRequestState
     func fetchPendingAccountDeletionRequest() async throws -> AccountDeletionRequest?
     func fetchImmediateAccountDeletionNotice() async throws -> ImmediateAccountDeletionNotice?
     func fetchBlockedUserIDs() async throws -> Set<UserProfile.ID>
+    func fetchFollowerUserIDs(for userID: UserProfile.ID) async throws -> Set<UserProfile.ID>
     func fetchNotifications() async throws -> [ThreadNotification]
     func fetchNotificationPreferences() async throws -> ThreadNotificationPreferences?
     func fetchNotificationPreferences(for userID: UserProfile.ID) async throws -> ThreadNotificationPreferences?
@@ -49,6 +51,8 @@ protocol ThreadRepository {
     ) async throws -> ImmediateAccountDeletionNotice
     func cancelAccountDeletion(for userID: UserProfile.ID) async throws
     func blockUser(_ userID: UserProfile.ID) async throws
+    func unblockUser(_ userID: UserProfile.ID) async throws
+    func removeFollower(_ followerID: UserProfile.ID, from followedUserID: UserProfile.ID) async throws
     func updateCurrentUserActivity(lastActiveAt: Date) async throws
     func markMessagesRead(from senderID: UserProfile.ID, to recipientID: UserProfile.ID) async throws
     func markNotificationRead(_ notificationID: ThreadNotification.ID, readAt: Date) async throws
@@ -57,6 +61,10 @@ protocol ThreadRepository {
     func setItemLiked(_ itemID: ThreadItem.ID, liked: Bool, likedAt: Date?) async throws
     func setUserFollowed(_ userID: UserProfile.ID, followed: Bool) async throws
 
+    func requestFollow(to userID: UserProfile.ID) async throws
+    func cancelFollowRequest(to userID: UserProfile.ID) async throws
+    func approveFollowRequest(from userID: UserProfile.ID) async throws
+    func denyFollowRequest(from userID: UserProfile.ID) async throws
     func sendFriendRequest(to userID: UserProfile.ID) async throws
     func cancelFriendRequest(to userID: UserProfile.ID) async throws
     func approveFriendRequest(from userID: UserProfile.ID) async throws

@@ -21,10 +21,28 @@ private enum ProfileSheet: Identifiable {
     }
 }
 
+enum ProfileConnectionsSheet: Identifiable {
+    case friends
+    case followers
+    case following
+
+    var id: String {
+        switch self {
+        case .friends:
+            "friends"
+        case .followers:
+            "followers"
+        case .following:
+            "following"
+        }
+    }
+}
+
 struct ProfileView: View {
     @EnvironmentObject private var appState: AppState
     @State private var likedItemsFilter: LikedItemsFilter = .thisWeek
     @State private var activeSheet: ProfileSheet?
+    @State private var activeConnectionsSheet: ProfileConnectionsSheet?
     @State private var isShowingFriendList = false
 
     private var viewModel: ProfileViewModel {
@@ -33,22 +51,15 @@ struct ProfileView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                AppTheme.background.ignoresSafeArea()
+            GeometryReader { proxy in
+                ZStack(alignment: .topTrailing) {
+                    AppTheme.background.ignoresSafeArea()
 
-                GeometryReader { proxy in
                     let contentWidth = max(0, proxy.size.width - (AppTheme.pagePadding * 2))
 
                     ScrollView {
-                        VStack(alignment: .leading, spacing: 18) {
-                            Text("ThreadShare")
-                                .font(AppTheme.brandFont(size: 40))
-                                .fontWeight(.bold)
-                                .foregroundStyle(AppTheme.ink)
-
-                            Text("Profile")
-                                .font(AppTheme.titleFont(size: 26))
-                                .foregroundStyle(AppTheme.ink)
+                        VStack(alignment: .leading, spacing: AppTheme.sectionSpacing) {
+                            topHeader
 
                             if let currentUser = viewModel.currentUser {
                                 profileHeader(for: currentUser)
@@ -83,56 +94,13 @@ struct ProfileView: View {
                         }
                         .padding(AppTheme.pagePadding)
                     }
+
+                    topActionButtons
+                        .padding(.trailing, AppTheme.pagePadding)
+                        .padding(.top, proxy.safeAreaInsets.top + AppTheme.tightSpacing)
                 }
             }
             .navigationTitle("")
-            #if os(iOS)
-            .toolbarBackground(AppTheme.background, for: .navigationBar)
-            #endif
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    NavigationLink {
-                        NotificationCenterView()
-                            .environmentObject(appState)
-                    } label: {
-                        ZStack(alignment: .topTrailing) {
-                            Image(systemName: "bell")
-                                .font(.system(size: 17, weight: .semibold))
-                                .foregroundStyle(AppTheme.ink)
-                                .frame(width: 34, height: 34)
-                                .background(AppTheme.surface, in: Circle())
-                                .overlay(Circle().stroke(AppTheme.border, lineWidth: 1))
-
-                            if viewModel.unreadNotificationCount > 0 {
-                                Text("\(min(viewModel.unreadNotificationCount, 99))")
-                                    .font(AppTheme.bodyFont(size: 9).weight(.bold))
-                                    .foregroundStyle(.white)
-                                    .frame(minWidth: 16, minHeight: 16)
-                                    .padding(1)
-                                    .background(AppTheme.clay, in: Capsule())
-                                    .offset(x: 4, y: -4)
-                            }
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Notifications")
-                }
-
-                ToolbarItem(placement: .topBarTrailing) {
-                    NavigationLink {
-                        SettingsView()
-                    } label: {
-                        Image(systemName: "gearshape")
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundStyle(AppTheme.ink)
-                            .frame(width: 34, height: 34)
-                            .background(AppTheme.surface, in: Circle())
-                            .overlay(Circle().stroke(AppTheme.border, lineWidth: 1))
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Settings")
-                }
-            }
             .sheet(item: $activeSheet) { sheet in
                 switch sheet {
                 case .addItem:
@@ -143,11 +111,77 @@ struct ProfileView: View {
                         .environmentObject(appState)
                 }
             }
+            .sheet(item: $activeConnectionsSheet) { sheet in
+                ProfileConnectionsManagementView(kind: sheet)
+                    .environmentObject(appState)
+            }
             .navigationDestination(isPresented: $isShowingFriendList) {
                 FriendListView()
                     .environmentObject(appState)
             }
         }
+    }
+
+    private var topHeader: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("ThreadShare")
+                .font(AppTheme.brandFont(size: 40))
+                .foregroundStyle(AppTheme.ink)
+
+            Text("Profile")
+                .font(AppTheme.titleFont(size: 26))
+                .foregroundStyle(AppTheme.ink)
+        }
+        .padding(.trailing, 88)
+    }
+
+    private var topActionButtons: some View {
+        HStack(spacing: AppTheme.tightSpacing) {
+            NavigationLink {
+                NotificationCenterView()
+                    .environmentObject(appState)
+            } label: {
+                ZStack(alignment: .topTrailing) {
+                    Image(systemName: "bell")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(AppTheme.ink)
+                        .frame(width: 34, height: 34)
+                        .background(AppTheme.surface, in: Circle())
+                        .overlay(Circle().stroke(AppTheme.border, lineWidth: 1))
+
+                    if viewModel.unreadNotificationCount > 0 {
+                        Text("\(min(viewModel.unreadNotificationCount, 99))")
+                            .font(AppTheme.bodyFont(size: 9, weight: .bold))
+                            .foregroundStyle(.white)
+                            .frame(minWidth: 16, minHeight: 16)
+                            .padding(1)
+                            .background(AppTheme.clay, in: Capsule())
+                            .offset(x: 4, y: -4)
+                    }
+                }
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Notifications")
+
+            NavigationLink {
+                SettingsView()
+            } label: {
+                Image(systemName: "gearshape")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(AppTheme.ink)
+                    .frame(width: 34, height: 34)
+                    .background(AppTheme.surface, in: Circle())
+                    .overlay(Circle().stroke(AppTheme.border, lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Settings")
+        }
+        .padding(6)
+        .background(.ultraThinMaterial, in: Capsule())
+        .overlay(
+            Capsule()
+                .stroke(AppTheme.border, lineWidth: 1)
+        )
     }
 
     private func profileHeader(for user: UserProfile) -> some View {
@@ -157,18 +191,18 @@ struct ProfileView: View {
                     .overlay(Circle().stroke(AppTheme.surface, lineWidth: 4))
                     .shadow(color: AppTheme.softShadow, radius: 12, x: 0, y: 7)
 
-                VStack(alignment: .leading, spacing: 7) {
+                VStack(alignment: .leading, spacing: AppTheme.xSmallSpacing) {
                     Text(user.displayName)
                         .font(AppTheme.titleFont(size: 30))
                         .foregroundStyle(AppTheme.ink)
                         .lineLimit(1)
 
                     Text("@\(user.username)")
-                        .font(AppTheme.bodyFont(size: 15))
+                        .font(AppTheme.bodyFont(size: 15, weight: .medium))
                         .foregroundStyle(AppTheme.mutedInk)
 
                     Text(user.city)
-                        .font(AppTheme.bodyFont(size: 12))
+                        .font(AppTheme.bodyFont(size: 12, weight: .medium))
                         .foregroundStyle(AppTheme.softInk)
                 }
 
@@ -191,7 +225,7 @@ struct ProfileView: View {
                 isShowingFriendList = true
             }
         }
-        .padding(18)
+        .padding(AppTheme.cardPadding)
         .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous)
@@ -201,12 +235,14 @@ struct ProfileView: View {
     }
 
     private var friendRequestSummaryCard: some View {
-        let incomingCount = viewModel.incomingFriendRequestCount
-        let sentCount = viewModel.requestedFriendCount
+        let incomingFriendCount = viewModel.incomingFriendRequestCount
+        let incomingFollowCount = viewModel.incomingFollowRequestCount
+        let incomingCount = viewModel.totalIncomingRequestCount
+        let sentCount = viewModel.requestedFriendCount + viewModel.requestedFollowCount
 
         return VStack(alignment: .leading, spacing: 12) {
             HStack {
-                SectionTitle("Friend Requests")
+                SectionTitle("Requests")
                 Spacer()
                 InfoChip(
                     title: "\(incomingCount) Incoming",
@@ -215,7 +251,11 @@ struct ProfileView: View {
                 )
             }
 
-            Text(sentCount > 0 ? "\(sentCount) sent request\(sentCount == 1 ? "" : "s") waiting for approval." : "Search for classmates and style friends from your friends list.")
+            Text(requestSummaryText(
+                incomingFriendCount: incomingFriendCount,
+                incomingFollowCount: incomingFollowCount,
+                sentCount: sentCount
+            ))
                 .font(AppTheme.bodyFont(size: 13))
                 .foregroundStyle(AppTheme.mutedInk)
 
@@ -226,12 +266,28 @@ struct ProfileView: View {
                 isShowingFriendList = true
             }
         }
-        .padding(16)
+        .padding(AppTheme.cardPadding)
         .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous)
                 .stroke(AppTheme.border, lineWidth: 1)
         )
+    }
+
+    private func requestSummaryText(
+        incomingFriendCount: Int,
+        incomingFollowCount: Int,
+        sentCount: Int
+    ) -> String {
+        if incomingFriendCount > 0 || incomingFollowCount > 0 {
+            return "\(incomingFriendCount) friend request\(incomingFriendCount == 1 ? "" : "s") and \(incomingFollowCount) follower request\(incomingFollowCount == 1 ? "" : "s") waiting for review."
+        }
+
+        if sentCount > 0 {
+            return "\(sentCount) sent request\(sentCount == 1 ? "" : "s") waiting for approval."
+        }
+
+        return "Search for classmates, style friends, and follower requests in one place."
     }
 
     private func visibilityCard(for user: UserProfile) -> some View {
@@ -265,13 +321,19 @@ struct ProfileView: View {
 
     private func statsCard(for user: UserProfile) -> some View {
         let stats = viewModel.stats(for: user)
+        let canManageConnections = appState.isCurrentUser(id: user.id) && appState.canManageFollowGraph
 
-        return LazyVGrid(columns: [GridItem(.adaptive(minimum: 96), spacing: 10)], spacing: 10) {
-            ProfileStat(value: "\(stats.closetItems)", title: "Closet Items")
-            ProfileStat(value: "\(stats.friends)", title: "Friends")
-            ProfileStat(value: "\(stats.followers)", title: "Followers")
-            ProfileStat(value: "\(stats.following)", title: "Following")
-            ProfileStat(value: "\(stats.availableToLend)", title: "Available")
+        return VStack(spacing: 10) {
+            HStack(spacing: 10) {
+                ProfileStat(value: "\(stats.friends)", title: "Friends", showsDisclosureIndicator: canManageConnections, action: canManageConnections ? { activeConnectionsSheet = .friends } : nil)
+                ProfileStat(value: "\(stats.followers)", title: "Followers", showsDisclosureIndicator: canManageConnections, action: canManageConnections ? { activeConnectionsSheet = .followers } : nil)
+                ProfileStat(value: "\(stats.following)", title: "Following", showsDisclosureIndicator: canManageConnections, action: canManageConnections ? { activeConnectionsSheet = .following } : nil)
+            }
+
+            HStack(spacing: 10) {
+                ProfileStat(value: "\(stats.closetItems)", title: "Closet Items")
+                ProfileStat(value: "\(stats.availableToLend)", title: "Available")
+            }
         }
         .padding(14)
         .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous))
@@ -332,13 +394,22 @@ struct ProfileView: View {
                     systemImage: "hanger"
                 )
             } else {
-                ProfileClosetMasonryGrid(
+                ThreadMasonryGrid(
                     items: items,
                     spacing: 14,
                     availableWidth: availableWidth,
-                    columnCount: 2
+                    heightForItem: { item, tileWidth in
+                        ProfileClosetTile.estimatedHeight(for: item, tileWidth: tileWidth)
+                    },
+                    content: { item, tileWidth in
+                        NavigationLink {
+                            ThreadItemDetailView(item: item)
+                        } label: {
+                            ProfileClosetTile(item: item, tileWidth: tileWidth)
+                        }
+                        .buttonStyle(.plain)
+                    }
                 )
-                .frame(height: ProfileClosetMasonryGrid.heightFor(items: items, spacing: 14, availableWidth: availableWidth, columnCount: 2))
             }
         }
     }
@@ -371,8 +442,8 @@ struct ProfileView: View {
                             HStack(spacing: 12) {
                                 TileImageFallback(item: item)
                                     .frame(width: 56, height: 56)
-                                    .background(AppTheme.background, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                    .background(AppTheme.background, in: RoundedRectangle(cornerRadius: 17, style: .continuous))
+                                    .clipShape(RoundedRectangle(cornerRadius: 17, style: .continuous))
 
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(item.title)
@@ -397,7 +468,7 @@ struct ProfileView: View {
                                     .foregroundStyle(item.isLikedByCurrentUser ? AppTheme.accent : AppTheme.mutedInk)
                             }
                             .padding(10)
-                            .background(AppTheme.background, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .background(AppTheme.background, in: RoundedRectangle(cornerRadius: 19, style: .continuous))
                         }
                         .buttonStyle(.plain)
                     }
@@ -416,91 +487,36 @@ struct ProfileView: View {
 private struct ProfileStat: View {
     let value: String
     let title: String
+    var showsDisclosureIndicator = false
+    var action: (() -> Void)?
 
     var body: some View {
-        VStack(spacing: 4) {
-            Text(value)
-                .font(AppTheme.titleFont(size: 18))
-                .foregroundStyle(AppTheme.ink)
-                .lineLimit(1)
+        Button(action: { action?() }) {
+            VStack(spacing: 4) {
+                Text(value)
+                    .font(AppTheme.titleFont(size: 18))
+                    .foregroundStyle(AppTheme.ink)
+                    .lineLimit(1)
 
-            Text(title)
-                .font(AppTheme.bodyFont(size: 12))
-                .foregroundStyle(AppTheme.mutedInk)
-                .lineLimit(1)
-                .minimumScaleFactor(0.76)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
-        .background(AppTheme.background, in: RoundedRectangle(cornerRadius: AppTheme.smallCornerRadius, style: .continuous))
-    }
-}
+                Text(title)
+                    .font(AppTheme.bodyFont(size: 12))
+                    .foregroundStyle(AppTheme.mutedInk)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.76)
+                    .frame(maxWidth: .infinity)
 
-private struct ProfileClosetMasonryGrid: View {
-    let items: [ThreadItem]
-    let spacing: CGFloat
-    let availableWidth: CGFloat
-    let columnCount: Int
-
-    private var tileWidth: CGFloat {
-        let columns = max(columnCount, 1)
-        let totalSpacing = spacing * CGFloat(max(columns - 1, 0))
-        return max(120, (availableWidth - totalSpacing) / CGFloat(columns))
-    }
-
-    static func heightFor(items: [ThreadItem], spacing: CGFloat, availableWidth: CGFloat, columnCount: Int) -> CGFloat {
-        let columns = max(columnCount, 1)
-        let totalSpacing = spacing * CGFloat(max(columns - 1, 0))
-        let tileWidth = max(120, (availableWidth - totalSpacing) / CGFloat(columns))
-        var heights = Array(repeating: CGFloat.zero, count: columns)
-
-        for item in items {
-            guard let targetColumn = heights.enumerated().min(by: { $0.element < $1.element })?.offset else {
-                continue
-            }
-            heights[targetColumn] += tileWidth * ThreadItemImageSizing.heightRatio(for: item) + spacing
-        }
-
-        return max(0, (heights.max() ?? 0) - spacing)
-    }
-
-    var body: some View {
-        HStack(alignment: .top, spacing: spacing) {
-            ForEach(0..<max(columnCount, 1), id: \.self) { columnIndex in
-                LazyVStack(spacing: spacing) {
-                    ForEach(columnItems[columnIndex]) { item in
-                        NavigationLink {
-                            ThreadItemDetailView(item: item)
-                        } label: {
-                            ProfileClosetTile(
-                                item: item,
-                                tileWidth: tileWidth
-                            )
-                        }
-                        .buttonStyle(.plain)
-                        .frame(width: tileWidth, height: tileWidth * ThreadItemImageSizing.heightRatio(for: item))
-                        .clipped()
-                    }
+                if showsDisclosureIndicator {
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(AppTheme.mutedInk.opacity(0.7))
                 }
-                .frame(width: tileWidth)
             }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(AppTheme.background, in: RoundedRectangle(cornerRadius: AppTheme.smallCornerRadius, style: .continuous))
         }
-        .frame(width: availableWidth, alignment: .topLeading)
-    }
-
-    private var columnItems: [[ThreadItem]] {
-        let columns = max(columnCount, 1)
-        var distributed = Array(repeating: [ThreadItem](), count: columns)
-        var heights = Array(repeating: CGFloat.zero, count: columns)
-
-        for item in items {
-            guard let targetColumn = heights.enumerated().min(by: { $0.element < $1.element })?.offset else {
-                continue
-            }
-            distributed[targetColumn].append(item)
-            heights[targetColumn] += tileWidth * ThreadItemImageSizing.heightRatio(for: item) + spacing
-        }
-        return distributed
+        .buttonStyle(.plain)
+        .disabled(action == nil)
     }
 }
 
@@ -509,6 +525,10 @@ private struct ProfileClosetTile: View {
     let tileWidth: CGFloat
     private var tileHeight: CGFloat {
         tileWidth * ThreadItemImageSizing.heightRatio(for: item)
+    }
+
+    static func estimatedHeight(for item: ThreadItem, tileWidth: CGFloat) -> CGFloat {
+        tileWidth * ThreadItemImageSizing.heightRatio(for: item) + 78
     }
     private var tileShape: some Shape {
         RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous)

@@ -17,6 +17,7 @@ enum ThreadNotificationKind: String, CaseIterable, Codable, Identifiable {
     case itemReturned = "item_returned"
     case itemNeedsReturn = "item_needs_return"
     case friendRecentlyAdded = "friend_recently_added"
+    case friendTaggedItem = "friend_tagged_item"
 
     var id: String { rawValue }
 
@@ -31,6 +32,7 @@ enum ThreadNotificationKind: String, CaseIterable, Codable, Identifiable {
         case .itemReturned: "Item Returned"
         case .itemNeedsReturn: "Needs Return"
         case .friendRecentlyAdded: "Recently Added"
+        case .friendTaggedItem: "Tagged"
         }
     }
 
@@ -45,6 +47,7 @@ enum ThreadNotificationKind: String, CaseIterable, Codable, Identifiable {
         case .itemReturned: "arrow.uturn.backward.circle.fill"
         case .itemNeedsReturn: "exclamationmark.circle.fill"
         case .friendRecentlyAdded: "sparkles"
+        case .friendTaggedItem: "tag.fill"
         }
     }
 }

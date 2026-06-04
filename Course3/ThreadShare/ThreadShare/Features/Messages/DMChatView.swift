@@ -38,14 +38,14 @@ struct DMChatView: View {
                     header
 
                     ScrollView {
-                        VStack(alignment: .leading, spacing: 14) {
+                        VStack(alignment: .leading, spacing: AppTheme.tightSpacing) {
                             if let item {
                                 itemPreview(item)
                             }
 
                             if threadMessages.isEmpty {
                                 Text("No messages yet. Start the conversation.")
-                                    .font(AppTheme.bodyFont(size: 14))
+                                    .font(AppTheme.bodyFont(size: 14, weight: .medium))
                                     .foregroundStyle(AppTheme.mutedInk)
                             }
 
@@ -68,7 +68,7 @@ struct DMChatView: View {
                     Button("Done") {
                         dismiss()
                     }
-                    .fontWeight(.semibold)
+                    .font(AppTheme.bodyFont(size: 14, weight: .semibold))
                 }
             }
             .task(id: owner.id) {
@@ -81,7 +81,7 @@ struct DMChatView: View {
         HStack(spacing: 12) {
             UserAvatarView(imageName: owner.avatarImageName, size: 52)
 
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: AppTheme.microSpacing) {
                 Text(owner.displayName)
                     .font(AppTheme.titleFont(size: 20))
                     .foregroundStyle(AppTheme.ink)
@@ -109,9 +109,9 @@ struct DMChatView: View {
                 .frame(width: 62, height: 76)
                 .clipShape(RoundedRectangle(cornerRadius: AppTheme.smallCornerRadius, style: .continuous))
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: AppTheme.microSpacing) {
                 Text(item.title)
-                    .font(AppTheme.bodyFont(size: 15))
+                    .font(AppTheme.bodyFont(size: 15, weight: .medium))
                     .foregroundStyle(AppTheme.ink)
                     .lineLimit(2)
 
@@ -133,21 +133,21 @@ struct DMChatView: View {
     }
 
     private var composer: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: AppTheme.tightSpacing) {
             TextField("Message \(owner.displayName)", text: $draftMessage, axis: .vertical)
                 .textFieldStyle(.plain)
                 .lineLimit(1...3)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 11)
-                .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: 29, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    RoundedRectangle(cornerRadius: 29, style: .continuous)
                         .stroke(AppTheme.border, lineWidth: 1)
                 )
 
             Button(action: sendMessage) {
                 Text("Send")
-                    .font(AppTheme.bodyFont(size: 15))
+                    .font(AppTheme.bodyFont(size: 15, weight: .semibold))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 16)
                     .frame(height: 44)
@@ -186,22 +186,22 @@ struct DMChatView: View {
             .padding(.vertical, 10)
             .background(
                 isCurrentUser ? AppTheme.accent : AppTheme.surface,
-                in: RoundedRectangle(cornerRadius: 18, style: .continuous)
+                in: RoundedRectangle(cornerRadius: 25, style: .continuous)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                RoundedRectangle(cornerRadius: 25, style: .continuous)
                     .stroke(isCurrentUser ? .clear : AppTheme.border, lineWidth: 1)
             )
             .frame(maxWidth: .infinity, alignment: isCurrentUser ? .trailing : .leading)
     }
 
     private var unreadDivider: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: AppTheme.tightSpacing) {
             Rectangle()
                 .fill(AppTheme.border)
                 .frame(height: 1)
             Text("Unread Messages")
-                .font(AppTheme.bodyFont(size: 11).weight(.semibold))
+                .font(AppTheme.captionFont(size: 11, weight: .semibold))
                 .foregroundStyle(AppTheme.softInk)
                 .fixedSize()
             Rectangle()

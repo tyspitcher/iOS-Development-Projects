@@ -26,6 +26,7 @@ create table if not exists public.profiles (
     style_interests text[] not null default '{}'::text[],
     favorite_brands text[] not null default '{}'::text[],
     color_palette_preference_ids text[] not null default '{}'::text[],
+    requires_follower_approval boolean not null default false,
     follower_count integer not null default 0,
     following_count integer not null default 0,
     last_login_at timestamptz,
@@ -198,6 +199,15 @@ create table if not exists public.follows (
     unique (follower_id, followed_user_id)
 );
 
+create table if not exists public.follow_requests (
+    id uuid primary key default gen_random_uuid(),
+    requester_id uuid not null references public.profiles (id) on delete cascade,
+    recipient_id uuid not null references public.profiles (id) on delete cascade,
+    created_at timestamptz not null default now(),
+    unique (requester_id, recipient_id),
+    check (requester_id <> recipient_id)
+);
+
 create table if not exists public.friend_requests (
     id uuid primary key default gen_random_uuid(),
     requester_id uuid not null references public.profiles (id) on delete cascade,
@@ -333,6 +343,7 @@ alter table public.notification_preferences enable row level security;
 alter table public.push_device_tokens enable row level security;
 alter table public.return_reminders enable row level security;
 alter table public.follows enable row level security;
+alter table public.follow_requests enable row level security;
 alter table public.friend_requests enable row level security;
 alter table public.user_blocks enable row level security;
 alter table public.reports enable row level security;

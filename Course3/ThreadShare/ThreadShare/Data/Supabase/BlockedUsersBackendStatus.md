@@ -37,7 +37,7 @@ Policies:
 - Add explicit unblock UI and wire it to delete `user_blocks` rows.
 - Optionally suppress messaging and borrow-request interactions across blocked relationships.
 
-## Verification TODO (When More Users Exist)
+## Verification Notes (When More Users Exist)
 
 - Verify block persistence with at least two real accounts:
 - Account A blocks Account B in the app.

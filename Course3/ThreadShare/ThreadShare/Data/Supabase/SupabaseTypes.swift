@@ -56,6 +56,7 @@ struct SupabaseProfileRow: Codable {
     var style_interests: [String]
     var favorite_brands: [String]
     var color_palette_preference_ids: [String]
+    var requires_follower_approval: Bool
     var follower_count: Int
     var following_count: Int
     var last_login_at: Date? = nil
@@ -126,6 +127,13 @@ struct SupabaseFollowRow: Codable {
     var id: UUID
     var follower_id: UUID
     var followed_user_id: UUID
+    var created_at: Date?
+}
+
+struct SupabaseFollowRequestRow: Codable {
+    var id: UUID
+    var requester_id: UUID
+    var recipient_id: UUID
     var created_at: Date?
 }
 

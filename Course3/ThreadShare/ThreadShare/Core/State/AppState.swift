@@ -70,6 +70,12 @@ enum FriendConnectionState: Equatable {
     case friends
 }
 
+enum FollowConnectionState: Equatable {
+    case follow
+    case requested
+    case following
+}
+
 enum AppDeepLinkTarget: Equatable {
     case discoverItem(ThreadItem.ID)
     case borrowBoard
@@ -90,6 +96,8 @@ final class AppState: ObservableObject {
     @Published private(set) var returnReminders: [BorrowReturnReminder] = []
     @Published private(set) var outgoingFriendRequestUserIDs: Set<UserProfile.ID> = []
     @Published private(set) var incomingFriendRequestUserIDs: Set<UserProfile.ID> = []
+    @Published private(set) var outgoingFollowRequestUserIDs: Set<UserProfile.ID> = []
+    @Published private(set) var incomingFollowRequestUserIDs: Set<UserProfile.ID> = []
     @Published private(set) var pendingAccountDeletionRequest: AccountDeletionRequest?
     @Published private(set) var immediateAccountDeletionNotice: ImmediateAccountDeletionNotice?
     @Published private(set) var blockedUserIDs: Set<UserProfile.ID> = []
@@ -100,6 +108,7 @@ final class AppState: ObservableObject {
     @Published var errorMessage: String?
 
     private let repository: ThreadRepository
+    let isDemoMode: Bool
     private let activityHeartbeatThrottle: TimeInterval = 15 * 60
     private var lastActivityHeartbeatAt: Date?
     private var hasPendingLiveRefresh = false
@@ -110,8 +119,9 @@ final class AppState: ObservableObject {
         case forceOff
     }
 
-    init(repository: ThreadRepository? = nil) {
+    init(repository: ThreadRepository? = nil, isDemoMode: Bool = false) {
         self.repository = repository ?? LocalThreadRepository()
+        self.isDemoMode = isDemoMode
     }
 
     func refreshLiveState() async {
@@ -149,6 +159,18 @@ final class AppState: ObservableObject {
     var incomingFriendRequests: [UserProfile] {
         users
             .filter { incomingFriendRequestUserIDs.contains($0.id) && !isBlockedUser($0.id) }
+            .sorted { $0.displayName < $1.displayName }
+    }
+
+    var requestedFollows: [UserProfile] {
+        users
+            .filter { outgoingFollowRequestUserIDs.contains($0.id) && !isBlockedUser($0.id) }
+            .sorted { $0.displayName < $1.displayName }
+    }
+
+    var incomingFollowRequests: [UserProfile] {
+        users
+            .filter { incomingFollowRequestUserIDs.contains($0.id) && !isBlockedUser($0.id) }
             .sorted { $0.displayName < $1.displayName }
     }
 
@@ -192,6 +214,7 @@ final class AppState: ObservableObject {
             async let requests = repository.fetchBorrowRequests()
             async let messages = repository.fetchMessages()
             async let friendRequestState = repository.fetchFriendRequestState()
+            async let followRequestState = repository.fetchFollowRequestState()
             async let blockedUserIDs = repository.fetchBlockedUserIDs()
             async let notifications = repository.fetchNotifications()
             async let notificationPreferences = repository.fetchNotificationPreferences()
@@ -212,6 +235,9 @@ final class AppState: ObservableObject {
             let persistedFriendRequestState = try await friendRequestState
             self.outgoingFriendRequestUserIDs = persistedFriendRequestState.outgoingUserIDs
             self.incomingFriendRequestUserIDs = persistedFriendRequestState.incomingUserIDs
+            let persistedFollowRequestState = try await followRequestState
+            self.outgoingFollowRequestUserIDs = persistedFollowRequestState.outgoingUserIDs
+            self.incomingFollowRequestUserIDs = persistedFollowRequestState.incomingUserIDs
             self.pendingAccountDeletionRequest = try await repository.fetchPendingAccountDeletionRequest()
             self.immediateAccountDeletionNotice = try await repository.fetchImmediateAccountDeletionNotice()
             self.blockedUserIDs = try await blockedUserIDs
@@ -510,7 +536,33 @@ final class AppState: ObservableObject {
             } else {
                 pendingDeepLinkTarget = .notificationCenter
             }
+        case .friendTaggedItem:
+            if
+                let itemID = notification.itemID,
+                threadItems.contains(where: { $0.id == itemID })
+            {
+                pendingDeepLinkTarget = .discoverItem(itemID)
+            } else {
+                pendingDeepLinkTarget = .notificationCenter
+            }
         }
+    }
+
+    @discardableResult
+    func tagFriend(_ friendID: UserProfile.ID, for item: ThreadItem) -> Bool {
+        guard let currentUser else { return false }
+        guard friendID != currentUser.id else { return false }
+        guard let friend = user(withID: friendID), friend.relationship == .friend else { return false }
+
+        createNotification(
+            recipientID: friendID,
+            actorID: currentUser.id,
+            kind: .friendTaggedItem,
+            title: "\(currentUser.displayName) tagged you",
+            body: "\(currentUser.displayName) tagged you in \(item.title).",
+            itemID: item.id
+        )
+        return true
     }
 
     private func notifyFriendsAboutNewItem(_ item: ThreadItem) async {
@@ -558,7 +610,19 @@ final class AppState: ObservableObject {
 
     func owner(for item: ThreadItem) -> UserProfile? {
         guard !isBlockedUser(item.ownerID) else { return nil }
-        return users.first { $0.id == item.ownerID }
+        return user(withID: item.ownerID)
+    }
+
+    func user(withID userID: UserProfile.ID) -> UserProfile? {
+        if currentUser?.id == userID {
+            return currentUser
+        }
+
+        return users.first { $0.id == userID }
+    }
+
+    var canManageFollowGraph: Bool {
+        !isDemoMode
     }
 
     func isCurrentUser(id: UserProfile.ID) -> Bool {
@@ -630,31 +694,139 @@ final class AppState: ObservableObject {
     }
 
     func toggleFollow(for userID: UserProfile.ID) {
+        guard let currentUser, userID != currentUser.id else { return }
         guard let index = users.firstIndex(where: { $0.id == userID }) else { return }
+        let targetUser = users[index]
+
+        switch followConnectionState(for: userID) {
+        case .following:
+            setFollowedState(for: userID, followed: false)
+        case .requested:
+            cancelFollowRequest(to: userID)
+        case .follow:
+            if targetUser.requiresFollowerApproval {
+                requestFollow(to: userID)
+            } else {
+                setFollowedState(for: userID, followed: true)
+            }
+        }
+    }
+
+    @discardableResult
+    func unfollow(_ userID: UserProfile.ID) -> Bool {
+        guard let currentUser, userID != currentUser.id else { return false }
+        guard let index = users.firstIndex(where: { $0.id == userID }) else { return false }
+        guard users[index].isFollowedByCurrentUser else { return false }
+        setFollowedState(for: userID, followed: false)
+        return true
+    }
+
+    @discardableResult
+    func removeFollower(_ followerID: UserProfile.ID) -> Bool {
+        guard var currentUser = currentUser, followerID != currentUser.id else { return false }
+        guard let index = users.firstIndex(where: { $0.id == followerID }) else { return false }
+
+        currentUser.followerCount = max(0, currentUser.followerCount - 1)
+        users[index].followingCount = max(0, users[index].followingCount - 1)
+        self.currentUser = currentUser
+        syncCurrentUserIntoUsers()
+
+        let updatedFollower = users[index]
+        let updatedCurrentUser = currentUser
+        Task {
+            try? await repository.removeFollower(followerID, from: updatedCurrentUser.id)
+            try? await repository.saveUser(updatedFollower)
+            try? await repository.saveUser(updatedCurrentUser)
+        }
+        return true
+    }
+
+    private func setFollowedState(for userID: UserProfile.ID, followed: Bool) {
+        guard var currentUser = currentUser, let index = users.firstIndex(where: { $0.id == userID }) else { return }
 
         let wasFollowing = users[index].isFollowedByCurrentUser
-        users[index].isFollowedByCurrentUser.toggle()
-        users[index].followerCount += users[index].isFollowedByCurrentUser ? 1 : -1
+        guard wasFollowing != followed else { return }
 
-        if users[index].isFollowedByCurrentUser && users[index].relationship == .publicUser {
+        users[index].isFollowedByCurrentUser = followed
+        if followed {
+            outgoingFollowRequestUserIDs.remove(userID)
+        }
+        users[index].followerCount = max(0, users[index].followerCount + (followed ? 1 : -1))
+
+        if followed && users[index].relationship == .publicUser {
             users[index].relationship = .follower
-        } else if !users[index].isFollowedByCurrentUser && users[index].relationship == .follower {
+        } else if !followed && users[index].relationship == .follower {
             users[index].relationship = .publicUser
         }
 
-        if wasFollowing == users[index].isFollowedByCurrentUser {
-            return
-        }
+        currentUser.followingCount = max(0, currentUser.followingCount + (followed ? 1 : -1))
+        self.currentUser = currentUser
+        syncCurrentUserIntoUsers()
 
         let updatedUser = users[index]
+        let updatedCurrentUser = currentUser
         Task {
+            try? await repository.saveUser(updatedCurrentUser)
             try? await repository.saveUser(updatedUser)
-            try? await repository.setUserFollowed(updatedUser.id, followed: updatedUser.isFollowedByCurrentUser)
+            try? await repository.setUserFollowed(updatedUser.id, followed: followed)
         }
+    }
+
+    private func syncCurrentUserIntoUsers() {
+        guard let currentUser, let index = users.firstIndex(where: { $0.id == currentUser.id }) else { return }
+        users[index] = currentUser
     }
 
     func requestFriend(for userID: UserProfile.ID) {
         sendFriendRequest(to: userID)
+    }
+
+    func requestFollow(to userID: UserProfile.ID) {
+        guard let currentUser else { return }
+        guard userID != currentUser.id else { return }
+        guard !isBlockedUser(userID) else { return }
+        guard followConnectionState(for: userID) == .follow else { return }
+        outgoingFollowRequestUserIDs.insert(userID)
+        Task {
+            try? await repository.requestFollow(to: userID)
+            await refreshSocialState()
+        }
+    }
+
+    func cancelFollowRequest(to userID: UserProfile.ID) {
+        outgoingFollowRequestUserIDs.remove(userID)
+        Task {
+            try? await repository.cancelFollowRequest(to: userID)
+            await refreshSocialState()
+        }
+    }
+
+    func approveFollowRequest(from userID: UserProfile.ID) {
+        guard var currentUser = currentUser else { return }
+        guard let index = users.firstIndex(where: { $0.id == userID }) else { return }
+
+        incomingFollowRequestUserIDs.remove(userID)
+        currentUser.followerCount += 1
+        users[index].followingCount += 1
+        self.currentUser = currentUser
+        syncCurrentUserIntoUsers()
+
+        let updatedUser = users[index]
+        let updatedCurrentUser = currentUser
+        Task {
+            try? await repository.saveUser(updatedUser)
+            try? await repository.saveUser(updatedCurrentUser)
+            try? await repository.approveFollowRequest(from: userID)
+            await refreshSocialState()
+        }
+    }
+
+    func denyFollowRequest(from userID: UserProfile.ID) {
+        incomingFollowRequestUserIDs.remove(userID)
+        Task {
+            try? await repository.denyFollowRequest(from: userID)
+            await refreshSocialState()
+        }
     }
 
     func sendFriendRequest(to userID: UserProfile.ID) {
@@ -699,12 +871,62 @@ final class AppState: ObservableObject {
         }
     }
 
+    func removeFriend(_ userID: UserProfile.ID) -> Bool {
+        guard let index = users.firstIndex(where: { $0.id == userID }) else { return false }
+        guard users[index].relationship == .friend else { return false }
+
+        users[index].relationship = .publicUser
+        let updatedUser = users[index]
+
+        Task {
+            try? await repository.saveUser(updatedUser)
+            await refreshSocialState()
+        }
+
+        return true
+    }
+
     func hasSentFriendRequest(to userID: UserProfile.ID) -> Bool {
         outgoingFriendRequestUserIDs.contains(userID)
     }
 
     func hasIncomingFriendRequest(from userID: UserProfile.ID) -> Bool {
         incomingFriendRequestUserIDs.contains(userID)
+    }
+
+    func followConnectionState(for userID: UserProfile.ID) -> FollowConnectionState {
+        guard let user = users.first(where: { $0.id == userID }) else {
+            return .follow
+        }
+
+        if user.isFollowedByCurrentUser {
+            return .following
+        }
+        if outgoingFollowRequestUserIDs.contains(userID) {
+            return .requested
+        }
+        return .follow
+    }
+
+    func followingUsers(for userID: UserProfile.ID) -> [UserProfile] {
+        guard let currentUser, userID == currentUser.id else { return [] }
+        return users
+            .filter { $0.id != userID && $0.isFollowedByCurrentUser && !isBlockedUser($0.id) }
+            .sorted { $0.displayName < $1.displayName }
+    }
+
+    func followerUsers(for userID: UserProfile.ID) async -> [UserProfile] {
+        guard let currentUser, userID == currentUser.id else { return [] }
+
+        do {
+            let followerIDs = try await repository.fetchFollowerUserIDs(for: userID)
+            return followerIDs
+                .compactMap { user(withID: $0) }
+                .filter { !isBlockedUser($0.id) && $0.id != currentUser.id }
+                .sorted { $0.displayName < $1.displayName }
+        } catch {
+            return []
+        }
     }
 
     func friendConnectionState(for userID: UserProfile.ID) -> FriendConnectionState {
@@ -869,7 +1091,10 @@ final class AppState: ObservableObject {
 
         switch status {
         case .approved, .declined:
-            guard isOwner, request.status == .pending else { return }
+            guard
+                (isOwner && request.status == .pending) ||
+                (isBorrower && request.status == .returnPendingOwnerConfirmation && status == .approved)
+            else { return }
         case .returned:
             guard isOwner, (request.status == .approved || request.status == .returnPendingOwnerConfirmation) else { return }
         case .returnPendingOwnerConfirmation:
@@ -885,6 +1110,8 @@ final class AppState: ObservableObject {
             if borrowRequests[requestIndex].borrowerMarkedReturnedAt == nil {
                 borrowRequests[requestIndex].borrowerMarkedReturnedAt = Date()
             }
+        } else if status == .approved && isBorrower && request.status == .returnPendingOwnerConfirmation {
+            borrowRequests[requestIndex].borrowerMarkedReturnedAt = nil
         } else {
             borrowRequests[requestIndex].borrowerMarkedReturnedAt = nil
         }
@@ -959,6 +1186,18 @@ final class AppState: ObservableObject {
 
     func borrowerMarkedRequestReturned(_ requestID: BorrowRequest.ID) {
         updateBorrowRequest(requestID, status: .returnPendingOwnerConfirmation)
+    }
+
+    func borrowerToggledReturnedState(_ requestID: BorrowRequest.ID) {
+        guard let request = borrowRequests.first(where: { $0.id == requestID }) else { return }
+        switch request.status {
+        case .approved:
+            updateBorrowRequest(requestID, status: .returnPendingOwnerConfirmation)
+        case .returnPendingOwnerConfirmation:
+            updateBorrowRequest(requestID, status: .approved)
+        default:
+            return
+        }
     }
 
     func ownerConfirmedRequestReturned(_ requestID: BorrowRequest.ID) {
@@ -1083,10 +1322,14 @@ final class AppState: ObservableObject {
         do {
             async let refreshedUsers = repository.fetchUsers()
             async let refreshedFriendState = repository.fetchFriendRequestState()
+            async let refreshedFollowState = repository.fetchFollowRequestState()
             users = try await refreshedUsers
             let state = try await refreshedFriendState
             outgoingFriendRequestUserIDs = state.outgoingUserIDs
             incomingFriendRequestUserIDs = state.incomingUserIDs
+            let followState = try await refreshedFollowState
+            outgoingFollowRequestUserIDs = followState.outgoingUserIDs
+            incomingFollowRequestUserIDs = followState.incomingUserIDs
         } catch {
             // Keep UI responsive even if background social refresh fails.
         }
@@ -1205,6 +1448,12 @@ final class AppState: ObservableObject {
         blockedUserIDs.contains(userID)
     }
 
+    var blockedUsers: [UserProfile] {
+        users
+            .filter { blockedUserIDs.contains($0.id) && !isCurrentUser(id: $0.id) }
+            .sorted { $0.displayName < $1.displayName }
+    }
+
     @discardableResult
     func blockUser(_ userID: UserProfile.ID) -> Bool {
         guard canBlockUser(userID) else { return false }
@@ -1217,6 +1466,18 @@ final class AppState: ObservableObject {
 
         Task {
             try? await repository.blockUser(userID)
+        }
+
+        return true
+    }
+
+    @discardableResult
+    func unblockUser(_ userID: UserProfile.ID) -> Bool {
+        guard blockedUserIDs.contains(userID) else { return false }
+        blockedUserIDs.remove(userID)
+
+        Task {
+            try? await repository.unblockUser(userID)
         }
 
         return true

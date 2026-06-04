@@ -9,20 +9,19 @@ import SwiftUI
 
 struct ThreadShareLogoText: View {
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: AppTheme.tightSpacing) {
             ZStack {
                 Circle()
                     .fill(AppTheme.accentSoft)
 
                 Image(systemName: "hanger")
-                    .font(.system(size: 15, weight: .bold))
+                    .font(AppTheme.captionFont(size: 15, weight: .bold))
                     .foregroundStyle(AppTheme.accent)
             }
             .frame(width: 32, height: 32)
 
             Text("ThreadShare")
                 .font(AppTheme.brandFont(size: 34))
-                .fontWeight(.bold)
                 .foregroundStyle(AppTheme.ink)
         }
         .accessibilityElement(children: .combine)
@@ -39,10 +38,10 @@ struct PrimaryButton: View {
     var body: some View {
         Button(action: action) {
             buttonLabel
-                .font(AppTheme.bodyFont(size: 16))
+                .font(AppTheme.bodyFont(size: 16, weight: .semibold))
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
-                .frame(height: 48)
+                .frame(height: AppTheme.buttonHeight)
                 .background(isDisabled ? AppTheme.softInk : AppTheme.accent, in: RoundedRectangle(cornerRadius: AppTheme.smallCornerRadius, style: .continuous))
                 .shadow(color: isDisabled ? .clear : AppTheme.accent.opacity(0.22), radius: 12, x: 0, y: 7)
         }
@@ -69,10 +68,10 @@ struct SecondaryButton: View {
     var body: some View {
         Button(action: action) {
             buttonLabel
-                .font(AppTheme.bodyFont(size: 16))
+                .font(AppTheme.bodyFont(size: 16, weight: .semibold))
                 .foregroundStyle(isDisabled ? AppTheme.softInk : AppTheme.ink)
                 .frame(maxWidth: .infinity)
-                .frame(height: 48)
+                .frame(height: AppTheme.buttonHeight)
                 .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: AppTheme.smallCornerRadius, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: AppTheme.smallCornerRadius, style: .continuous)
@@ -101,11 +100,11 @@ struct FilterChip: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(AppTheme.bodyFont(size: 16))
+                .font(AppTheme.bodyFont(size: 16, weight: .medium))
                 .foregroundStyle(isSelected ? AppTheme.selectedPillText : AppTheme.ink)
                 .lineLimit(1)
                 .padding(.horizontal, 15)
-                .frame(height: 38)
+                .frame(height: AppTheme.pillHeight)
                 .background(isSelected ? AppTheme.selectedPillBackground : AppTheme.pillBackground, in: Capsule())
                 .overlay {
                     Capsule()
@@ -122,19 +121,19 @@ struct InfoChip: View {
     var tint: Color = AppTheme.ink
 
     var body: some View {
-        HStack(spacing: 5) {
+        HStack(spacing: AppTheme.xSmallSpacing) {
             if let systemImage {
                 Image(systemName: systemImage)
-                    .font(.caption.weight(.bold))
+                    .font(AppTheme.captionFont(size: 11, weight: .semibold))
             }
 
             Text(title)
                 .lineLimit(1)
         }
-        .font(AppTheme.bodyFont(size: 12))
+        .font(AppTheme.bodyFont(size: 12, weight: .medium))
         .foregroundStyle(tint)
         .padding(.horizontal, 10)
-        .frame(height: 30)
+        .frame(height: AppTheme.chipHeight)
         .background(AppTheme.pillBackground, in: Capsule())
         .overlay(
             Capsule()
@@ -148,11 +147,11 @@ struct RecentlyAddedBadge: View {
 
     var body: some View {
         Label(title, systemImage: "sparkles")
-            .font(AppTheme.bodyFont(size: 11).weight(.semibold))
+            .font(AppTheme.captionFont(size: 11, weight: .semibold))
             .foregroundStyle(AppTheme.selectedPillText)
             .lineLimit(1)
             .padding(.horizontal, 9)
-            .frame(height: 26)
+            .frame(height: AppTheme.badgeHeight)
             .background(AppTheme.selectedPillBackground, in: Capsule())
             .overlay(
                 Capsule()
@@ -221,20 +220,20 @@ struct EmptyStateView: View {
     var action: (() -> Void)?
 
     var body: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: AppTheme.tightSpacing) {
             Image(systemName: systemImage)
-                .font(.system(size: 34, weight: .semibold))
+                .font(AppTheme.titleFont(size: 34))
                 .foregroundStyle(AppTheme.accent)
                 .frame(width: 64, height: 64)
                 .background(AppTheme.accentSoft, in: Circle())
 
-            VStack(spacing: 6) {
+            VStack(spacing: AppTheme.xSmallSpacing) {
                 Text(title)
-                    .font(.headline)
+                    .font(AppTheme.titleFont(size: 20))
                     .foregroundStyle(AppTheme.ink)
 
                 Text(message)
-                    .font(.subheadline)
+                    .font(AppTheme.bodyFont(size: 14))
                     .foregroundStyle(AppTheme.mutedInk)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
@@ -243,10 +242,10 @@ struct EmptyStateView: View {
             if let actionTitle, let action {
                 SecondaryButton(title: actionTitle, systemImage: "arrow.counterclockwise", action: action)
                     .frame(maxWidth: 220)
-                    .padding(.top, 4)
+                    .padding(.top, AppTheme.microSpacing)
             }
         }
-        .padding(24)
+        .padding(AppTheme.cardPadding)
         .frame(maxWidth: .infinity)
         .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous))
         .overlay(

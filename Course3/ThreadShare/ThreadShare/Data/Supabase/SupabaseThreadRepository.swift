@@ -177,6 +177,22 @@ final class SupabaseThreadRepository: ThreadRepository {
         return FriendRequestState(outgoingUserIDs: outgoing, incomingUserIDs: incoming)
     }
 
+    func fetchFollowRequestState() async throws -> FollowRequestState {
+        let session = try requireSession()
+        let rows: [SupabaseFollowRequestRow] = try await client.request(
+            path: "/rest/v1/follow_requests",
+            method: .get,
+            queryItems: [
+                URLQueryItem(name: "select", value: "*"),
+                URLQueryItem(name: "or", value: "(requester_id.eq.\(session.userID.uuidString),recipient_id.eq.\(session.userID.uuidString))")
+            ]
+        )
+
+        let outgoing = Set(rows.filter { $0.requester_id == session.userID }.map(\.recipient_id))
+        let incoming = Set(rows.filter { $0.recipient_id == session.userID }.map(\.requester_id))
+        return FollowRequestState(outgoingUserIDs: outgoing, incomingUserIDs: incoming)
+    }
+
     func fetchPendingAccountDeletionRequest() async throws -> AccountDeletionRequest? {
         let session = try requireSession()
         let rows: [SupabaseAccountDeletionRequestRow] = try await client.request(
@@ -210,6 +226,18 @@ final class SupabaseThreadRepository: ThreadRepository {
             ]
         )
         return Set(rows.map(\.blocked_user_id))
+    }
+
+    func fetchFollowerUserIDs(for userID: UserProfile.ID) async throws -> Set<UserProfile.ID> {
+        let rows: [SupabaseFollowRow] = try await client.request(
+            path: "/rest/v1/follows",
+            method: .get,
+            queryItems: [
+                URLQueryItem(name: "select", value: "follower_id"),
+                URLQueryItem(name: "followed_user_id", value: "eq.\(userID.uuidString)")
+            ]
+        )
+        return Set(rows.map(\.follower_id))
     }
 
     func fetchNotifications() async throws -> [ThreadNotification] {
@@ -290,6 +318,7 @@ final class SupabaseThreadRepository: ThreadRepository {
             style_interests: user.styleInterests,
             favorite_brands: user.favoriteBrands,
             color_palette_preference_ids: user.colorPalettePreferenceIDs,
+            requires_follower_approval: user.requiresFollowerApproval,
             follower_count: user.followerCount,
             following_count: user.followingCount,
             last_login_at: user.lastLoginAt,
@@ -469,6 +498,33 @@ final class SupabaseThreadRepository: ThreadRepository {
         try await insert(path: "/rest/v1/user_blocks", row: row)
     }
 
+    func unblockUser(_ userID: UserProfile.ID) async throws {
+        let session = try requireSession()
+        guard userID != session.userID else { return }
+
+        try await client.requestVoid(
+            path: "/rest/v1/user_blocks",
+            method: .delete,
+            queryItems: [
+                URLQueryItem(name: "blocker_id", value: "eq.\(session.userID.uuidString)"),
+                URLQueryItem(name: "blocked_user_id", value: "eq.\(userID.uuidString)")
+            ]
+        )
+    }
+
+    func removeFollower(_ followerID: UserProfile.ID, from followedUserID: UserProfile.ID) async throws {
+        let session = try requireSession()
+        guard followedUserID == session.userID else { return }
+        try await client.requestVoid(
+            path: "/rest/v1/follows",
+            method: .delete,
+            queryItems: [
+                URLQueryItem(name: "follower_id", value: "eq.\(followerID.uuidString)"),
+                URLQueryItem(name: "followed_user_id", value: "eq.\(followedUserID.uuidString)")
+            ]
+        )
+    }
+
     func updateCurrentUserActivity(lastActiveAt: Date) async throws {
         let session = try requireSession()
         try await SupabaseUserActivityService(session: session).markActive(at: lastActiveAt)
@@ -550,6 +606,80 @@ final class SupabaseThreadRepository: ThreadRepository {
                 ]
             )
         }
+    }
+
+    func requestFollow(to userID: UserProfile.ID) async throws {
+        let session = try requireSession()
+        guard userID != session.userID else { return }
+
+        let existingRows: [SupabaseFollowRequestRow] = try await client.request(
+            path: "/rest/v1/follow_requests",
+            method: .get,
+            queryItems: [
+                URLQueryItem(name: "select", value: "*"),
+                URLQueryItem(name: "requester_id", value: "eq.\(session.userID.uuidString)"),
+                URLQueryItem(name: "recipient_id", value: "eq.\(userID.uuidString)"),
+                URLQueryItem(name: "limit", value: "1")
+            ]
+        )
+        guard existingRows.isEmpty else { return }
+
+        let row = SupabaseFollowRequestRow(
+            id: UUID(),
+            requester_id: session.userID,
+            recipient_id: userID,
+            created_at: Date()
+        )
+        try await insert(path: "/rest/v1/follow_requests", row: row)
+    }
+
+    func cancelFollowRequest(to userID: UserProfile.ID) async throws {
+        let session = try requireSession()
+        try await client.requestVoid(
+            path: "/rest/v1/follow_requests",
+            method: .delete,
+            queryItems: [
+                URLQueryItem(name: "requester_id", value: "eq.\(session.userID.uuidString)"),
+                URLQueryItem(name: "recipient_id", value: "eq.\(userID.uuidString)")
+            ]
+        )
+    }
+
+    func approveFollowRequest(from userID: UserProfile.ID) async throws {
+        let session = try requireSession()
+        let rows: [SupabaseFollowRequestRow] = try await client.request(
+            path: "/rest/v1/follow_requests",
+            method: .get,
+            queryItems: [
+                URLQueryItem(name: "select", value: "*"),
+                URLQueryItem(name: "requester_id", value: "eq.\(userID.uuidString)"),
+                URLQueryItem(name: "recipient_id", value: "eq.\(session.userID.uuidString)"),
+                URLQueryItem(name: "limit", value: "1")
+            ]
+        )
+        guard !rows.isEmpty else { return }
+        let follow = SupabaseFollowRow(id: UUID(), follower_id: userID, followed_user_id: session.userID, created_at: Date())
+        try await upsert(path: "/rest/v1/follows", row: follow)
+        try await client.requestVoid(
+            path: "/rest/v1/follow_requests",
+            method: .delete,
+            queryItems: [
+                URLQueryItem(name: "requester_id", value: "eq.\(userID.uuidString)"),
+                URLQueryItem(name: "recipient_id", value: "eq.\(session.userID.uuidString)")
+            ]
+        )
+    }
+
+    func denyFollowRequest(from userID: UserProfile.ID) async throws {
+        let session = try requireSession()
+        try await client.requestVoid(
+            path: "/rest/v1/follow_requests",
+            method: .delete,
+            queryItems: [
+                URLQueryItem(name: "requester_id", value: "eq.\(userID.uuidString)"),
+                URLQueryItem(name: "recipient_id", value: "eq.\(session.userID.uuidString)")
+            ]
+        )
     }
 
     func sendFriendRequest(to userID: UserProfile.ID) async throws {
@@ -716,6 +846,7 @@ private extension SupabaseProfileRow {
             favoriteBrands: favorite_brands,
             colorPalettePreferenceIDs: FashionPreferenceCatalog.deduplicated(color_palette_preference_ids),
             isFollowedByCurrentUser: isFollowedByCurrentUser,
+            requiresFollowerApproval: requires_follower_approval,
             lastLoginAt: last_login_at,
             lastActiveAt: last_active_at
         )

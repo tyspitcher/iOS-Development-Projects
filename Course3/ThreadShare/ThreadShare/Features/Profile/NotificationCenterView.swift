@@ -125,7 +125,7 @@ struct NotificationCenterView: View {
                 Button("Mark Read") {
                     appState.markAllNotificationsRead()
                 }
-                .font(AppTheme.bodyFont(size: 13).weight(.semibold))
+                .font(AppTheme.bodyFont(size: 13, weight: .semibold))
                 .foregroundStyle(appState.unreadNotificationCount == 0 ? AppTheme.softInk : AppTheme.accent)
                 .disabled(appState.unreadNotificationCount == 0)
             }
@@ -159,7 +159,7 @@ struct NotificationCenterView: View {
             if let preferences {
                 Toggle(isOn: preferenceBinding(\.friendNewItemAlertsEnabled, preferences: preferences)) {
                     Text("Friend new-item alerts")
-                        .font(AppTheme.bodyFont(size: 14))
+                        .font(AppTheme.bodyFont(size: 14, weight: .medium))
                         .foregroundStyle(AppTheme.ink)
                 }
                 .tint(AppTheme.accent)
@@ -172,7 +172,7 @@ struct NotificationCenterView: View {
                         Text(cadence.displayName).tag(cadence)
                     }
                 }
-                .font(AppTheme.bodyFont(size: 14))
+                .font(AppTheme.bodyFont(size: 14, weight: .medium))
                 .foregroundStyle(AppTheme.ink)
                 .pickerStyle(.segmented)
 
@@ -185,7 +185,7 @@ struct NotificationCenterView: View {
 
                 Toggle(isOn: preferenceBinding(\.pushNotificationsEnabled, preferences: preferences)) {
                     Text("Push notifications")
-                        .font(AppTheme.bodyFont(size: 14))
+                        .font(AppTheme.bodyFont(size: 14, weight: .medium))
                         .foregroundStyle(AppTheme.ink)
                 }
                 .tint(AppTheme.accent)
@@ -204,7 +204,7 @@ struct NotificationCenterView: View {
                     }
                 } label: {
                     Label("Enable Device Push", systemImage: "bell.badge.fill")
-                        .font(AppTheme.bodyFont(size: 14).weight(.semibold))
+                        .font(AppTheme.bodyFont(size: 14, weight: .semibold))
                         .foregroundStyle(AppTheme.selectedPillText)
                         .frame(maxWidth: .infinity)
                         .frame(height: 42)
@@ -234,7 +234,7 @@ struct NotificationCenterView: View {
     ) -> some View {
         Toggle(isOn: preferenceBinding(keyPath, preferences: preferences)) {
             Text(title)
-                .font(AppTheme.bodyFont(size: 13))
+                .font(AppTheme.bodyFont(size: 13, weight: .medium))
                 .foregroundStyle(AppTheme.mutedInk)
         }
         .tint(AppTheme.accent)
@@ -243,7 +243,7 @@ struct NotificationCenterView: View {
     private func notificationSection(title: String, notifications: [NotificationEntry]) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
-                .font(AppTheme.bodyFont(size: 13).weight(.semibold))
+                .font(AppTheme.bodyFont(size: 13, weight: .semibold))
                 .foregroundStyle(AppTheme.mutedInk)
                 .textCase(.uppercase)
 
@@ -347,7 +347,7 @@ private struct NotificationRow: View {
             VStack(alignment: .leading, spacing: 5) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(entry.displayTitle)
-                        .font(AppTheme.bodyFont(size: 15).weight(.semibold))
+                        .font(AppTheme.bodyFont(size: 15, weight: .semibold))
                         .foregroundStyle(AppTheme.ink)
 
                     Spacer()

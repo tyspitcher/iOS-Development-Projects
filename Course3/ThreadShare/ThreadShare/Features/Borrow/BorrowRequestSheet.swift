@@ -30,10 +30,10 @@ struct BorrowRequestSheet: View {
                 AppTheme.background.ignoresSafeArea()
 
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 18) {
+                    VStack(alignment: .leading, spacing: AppTheme.sectionSpacing) {
                         itemSummary
 
-                        VStack(spacing: 14) {
+                        VStack(spacing: AppTheme.tightSpacing) {
                             DatePicker("Borrow date", selection: $startDate, displayedComponents: .date)
                                 .onChange(of: startDate) { _, newValue in
                                     if endDate <= newValue {
@@ -48,7 +48,7 @@ struct BorrowRequestSheet: View {
                                 }
                         }
                         .font(AppTheme.bodyFont(size: 15))
-                        .padding(16)
+                        .padding(AppTheme.cardPadding)
                         .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous))
 
                         if showDateError {
@@ -86,7 +86,7 @@ struct BorrowRequestSheet: View {
                     Button("Cancel") {
                         dismiss()
                     }
-                    .fontWeight(.semibold)
+                    .font(AppTheme.bodyFont(size: 14, weight: .semibold))
                 }
             }
         }
@@ -101,7 +101,7 @@ struct BorrowRequestSheet: View {
                 .frame(width: 86, height: 104)
                 .clipShape(RoundedRectangle(cornerRadius: AppTheme.smallCornerRadius, style: .continuous))
 
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: AppTheme.xSmallSpacing) {
                 Text(item.title)
                     .font(AppTheme.titleFont(size: 20))
                     .foregroundStyle(AppTheme.ink)
@@ -113,7 +113,7 @@ struct BorrowRequestSheet: View {
                     .lineLimit(1)
 
                 Text("\(item.brand) | \(item.size)")
-                    .font(AppTheme.bodyFont(size: 12))
+                    .font(AppTheme.bodyFont(size: 12, weight: .medium))
                     .foregroundStyle(AppTheme.softInk)
 
                 AvailabilityBadge(status: item.availabilityStatus)
@@ -121,7 +121,7 @@ struct BorrowRequestSheet: View {
 
             Spacer(minLength: 0)
         }
-        .padding(14)
+        .padding(AppTheme.cardPadding)
         .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous)

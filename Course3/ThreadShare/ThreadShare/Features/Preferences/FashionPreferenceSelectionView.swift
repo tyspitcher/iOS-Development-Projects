@@ -85,7 +85,7 @@ struct FashionPreferenceSelectionView: View {
                     .accessibilityHint("Enter a brand name, then add it to your favorites.")
 
                 Button("Add", action: addCustomBrand)
-                    .font(AppTheme.bodyFont(size: 14).weight(.semibold))
+                    .font(AppTheme.bodyFont(size: 14, weight: .semibold))
                     .foregroundStyle(customBrandEntry.trimmed.isEmpty ? AppTheme.softInk : AppTheme.ink)
                     .frame(width: 64, height: 44)
                     .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: AppTheme.smallCornerRadius, style: .continuous))

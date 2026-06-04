@@ -17,6 +17,7 @@ final class LocalThreadRepository: ThreadRepository {
     private var borrowRequests: [BorrowRequest]
     private var messages: [DMMessage]
     private var friendRequestState: FriendRequestState
+    private var followRequestState: FollowRequestState
     private var pendingDeletionRequests: [UserProfile.ID: AccountDeletionRequest]
     private var immediateDeletionNotices: [UserProfile.ID: ImmediateAccountDeletionNotice]
     private var blockedUserIDs: Set<UserProfile.ID>
@@ -33,6 +34,7 @@ final class LocalThreadRepository: ThreadRepository {
         borrowRequests: [BorrowRequest] = SampleData.borrowRequests,
         messages: [DMMessage] = SampleData.dmMessages,
         friendRequestState: FriendRequestState = FriendRequestState(incomingUserIDs: [SampleData.users[5].id]),
+        followRequestState: FollowRequestState = FollowRequestState(incomingUserIDs: [SampleData.users[2].id]),
         pendingDeletionRequests: [UserProfile.ID: AccountDeletionRequest] = [:],
         immediateDeletionNotices: [UserProfile.ID: ImmediateAccountDeletionNotice] = [:],
         blockedUserIDs: Set<UserProfile.ID> = [],
@@ -48,6 +50,7 @@ final class LocalThreadRepository: ThreadRepository {
         self.borrowRequests = borrowRequests
         self.messages = messages
         self.friendRequestState = friendRequestState
+        self.followRequestState = followRequestState
         self.pendingDeletionRequests = pendingDeletionRequests
         self.immediateDeletionNotices = immediateDeletionNotices
         self.blockedUserIDs = blockedUserIDs
@@ -85,6 +88,10 @@ final class LocalThreadRepository: ThreadRepository {
         friendRequestState
     }
 
+    func fetchFollowRequestState() async throws -> FollowRequestState {
+        followRequestState
+    }
+
     func fetchPendingAccountDeletionRequest() async throws -> AccountDeletionRequest? {
         guard let request = pendingDeletionRequests[currentUser.id] else { return nil }
         return request.status == .pending ? request : nil
@@ -96,6 +103,11 @@ final class LocalThreadRepository: ThreadRepository {
 
     func fetchBlockedUserIDs() async throws -> Set<UserProfile.ID> {
         blockedUserIDs
+    }
+
+    func fetchFollowerUserIDs(for userID: UserProfile.ID) async throws -> Set<UserProfile.ID> {
+        guard userID == currentUser.id else { return [] }
+        return []
     }
 
     func fetchNotifications() async throws -> [ThreadNotification] {
@@ -214,6 +226,14 @@ final class LocalThreadRepository: ThreadRepository {
         blockedUserIDs.insert(userID)
     }
 
+    func unblockUser(_ userID: UserProfile.ID) async throws {
+        blockedUserIDs.remove(userID)
+    }
+
+    func removeFollower(_ followerID: UserProfile.ID, from followedUserID: UserProfile.ID) async throws {
+        // Demo mode does not persist follower graph mutations.
+    }
+
     func updateCurrentUserActivity(lastActiveAt: Date) async throws {
         // Demo mode keeps activity local and ephemeral.
     }
@@ -250,6 +270,22 @@ final class LocalThreadRepository: ThreadRepository {
     func setUserFollowed(_ userID: UserProfile.ID, followed: Bool) async throws {
         guard let index = users.firstIndex(where: { $0.id == userID }) else { return }
         users[index].isFollowedByCurrentUser = followed
+    }
+
+    func requestFollow(to userID: UserProfile.ID) async throws {
+        followRequestState.outgoingUserIDs.insert(userID)
+    }
+
+    func cancelFollowRequest(to userID: UserProfile.ID) async throws {
+        followRequestState.outgoingUserIDs.remove(userID)
+    }
+
+    func approveFollowRequest(from userID: UserProfile.ID) async throws {
+        followRequestState.incomingUserIDs.remove(userID)
+    }
+
+    func denyFollowRequest(from userID: UserProfile.ID) async throws {
+        followRequestState.incomingUserIDs.remove(userID)
     }
 
     func sendFriendRequest(to userID: UserProfile.ID) async throws {

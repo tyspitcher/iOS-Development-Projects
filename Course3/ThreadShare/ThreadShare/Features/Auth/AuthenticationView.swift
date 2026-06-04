@@ -25,12 +25,12 @@ struct AuthenticationView: View {
 
             ScrollViewReader { proxy in
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 20) {
-                        VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: AppTheme.sectionSpacing) {
+                        VStack(alignment: .leading, spacing: AppTheme.compactSpacing) {
                             ThreadShareLogoText()
 
                             Text(viewModel.mode == .signIn ? "Welcome back." : "Create your ThreadShare account.")
-                                .font(AppTheme.titleFont(size: 28))
+                                .font(AppTheme.titleFont(size: 30))
                                 .foregroundStyle(AppTheme.ink)
 
                             Text(viewModel.mode == .signIn ? "Sign in to open your own closet, requests, and messages." : "Create a login and profile so ThreadShare feels like yours from the start.")
@@ -72,7 +72,7 @@ struct AuthenticationView: View {
 
                         if let errorMessage = viewModel.errorMessage {
                             Text(errorMessage)
-                                .font(AppTheme.bodyFont(size: 13))
+                                .font(AppTheme.bodyFont(size: 13, weight: .medium))
                                 .foregroundStyle(.red)
                                 .fixedSize(horizontal: false, vertical: true)
                                 .accessibilityLabel("Error: \(errorMessage)")
@@ -139,9 +139,9 @@ struct AuthenticationView: View {
     private var demoModeCard: some View {
         VStack(alignment: .leading, spacing: 10) {
             Toggle(isOn: $demoModeEnabled) {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: AppTheme.microSpacing) {
                     Text("Demo mode")
-                        .font(AppTheme.bodyFont(size: 14).weight(.semibold))
+                        .font(AppTheme.bodyFont(size: 14, weight: .semibold))
                         .foregroundStyle(AppTheme.ink)
 
                     Text("Use the sample closet for presentations.")
@@ -158,7 +158,7 @@ struct AuthenticationView: View {
                 .font(AppTheme.bodyFont(size: 12))
                 .foregroundStyle(AppTheme.mutedInk)
         }
-        .padding(16)
+        .padding(AppTheme.cardPadding)
         .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous)
@@ -169,7 +169,7 @@ struct AuthenticationView: View {
 
 
     private var signInCard: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: AppTheme.tightSpacing) {
             field(
                 title: "Email",
                 text: $viewModel.email,
@@ -188,7 +188,7 @@ struct AuthenticationView: View {
                 }
             } label: {
                 Text("Forgot password?")
-                    .font(AppTheme.bodyFont(size: 13).weight(.semibold))
+                    .font(AppTheme.bodyFont(size: 13, weight: .semibold))
                     .foregroundStyle(AppTheme.accent)
                     .frame(maxWidth: .infinity, alignment: .trailing)
                     .frame(minHeight: 44, alignment: .trailing)
@@ -210,7 +210,7 @@ struct AuthenticationView: View {
             .disabled(!viewModel.canSubmit || viewModel.isSubmitting)
             .accessibilityHint("Attempts to sign in with your email and password.")
         }
-        .padding(16)
+        .padding(AppTheme.cardPadding)
         .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous)
@@ -223,9 +223,9 @@ struct AuthenticationView: View {
         text: Binding<String>,
         kind: FieldKind = .default
     ) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: AppTheme.xSmallSpacing) {
             Text(title)
-                .font(AppTheme.bodyFont(size: 13))
+                .font(AppTheme.bodyFont(size: 13, weight: .medium))
                 .foregroundStyle(AppTheme.accent)
 
             Group {
@@ -245,7 +245,7 @@ struct AuthenticationView: View {
                             isShowingPassword.toggle()
                         } label: {
                             Image(systemName: isShowingPassword ? "eye.slash.fill" : "eye.fill")
-                                .font(.system(size: 15, weight: .semibold))
+                                .font(AppTheme.captionFont(size: 15, weight: .semibold))
                                 .foregroundStyle(AppTheme.mutedInk)
                                 .frame(width: 34, height: 34)
                         }

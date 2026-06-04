@@ -29,7 +29,8 @@ enum SampleData {
             FashionPreferenceCatalog.ColorPaletteID.softNeutrals,
             FashionPreferenceCatalog.ColorPaletteID.coastal
         ],
-        isFollowedByCurrentUser: true
+        isFollowedByCurrentUser: true,
+        requiresFollowerApproval: true
     )
 
     static let users: [UserProfile] = [
@@ -101,7 +102,8 @@ enum SampleData {
                 FashionPreferenceCatalog.ColorPaletteID.coolTones,
                 FashionPreferenceCatalog.ColorPaletteID.monochrome
             ],
-            isFollowedByCurrentUser: false
+            isFollowedByCurrentUser: false,
+            requiresFollowerApproval: true
         ),
         UserProfile(
             id: UUID(uuidString: "55555555-5555-5555-5555-555555555555")!,

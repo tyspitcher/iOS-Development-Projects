@@ -60,7 +60,7 @@ struct ContentView: View {
                             Button("Done") {
                                 deepLinkedItem = nil
                             }
-                            .fontWeight(.semibold)
+                            .font(AppTheme.bodyFont(size: 14, weight: .semibold))
                         }
                     }
             }
@@ -74,7 +74,7 @@ struct ContentView: View {
                             Button("Done") {
                                 isShowingNotificationCenter = false
                             }
-                            .fontWeight(.semibold)
+                            .font(AppTheme.bodyFont(size: 14, weight: .semibold))
                         }
                     }
             }

@@ -1,4 +1,4 @@
-# User Activity Tracking
+# User Activity Tracking Status
 
 ThreadShare now stores lightweight activity timestamps on `public.profiles`:
 

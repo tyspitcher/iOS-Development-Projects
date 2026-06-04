@@ -9,7 +9,6 @@ import SwiftUI
 
 struct DiscoverView: View {
     @EnvironmentObject private var appState: AppState
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var isShowingFilters = false
     private let tileSpacing: CGFloat = 14
 
@@ -26,24 +25,42 @@ struct DiscoverView: View {
                     let contentWidth = max(0, proxy.size.width - (AppTheme.pagePadding * 2))
 
                     ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 18) {
+                        LazyVStack(alignment: .leading, spacing: AppTheme.sectionSpacing) {
                             header
 
                             if !viewModel.hasResults {
-                                EmptyStateView(
+                            EmptyStateView(
                                     title: "No pieces match",
                                     message: "Try changing your filters or browsing the full community feed.",
                                     actionTitle: "Reset Filters",
                                     action: viewModel.resetFilters
                                 )
                             } else {
-                                DiscoverMasonryGrid(
+                                ThreadMasonryGrid(
                                     items: viewModel.filteredItems,
                                     spacing: tileSpacing,
                                     availableWidth: contentWidth,
-                                    columnCount: horizontalSizeClass == .regular ? 3 : 2,
-                                    ownerForItem: viewModel.owner(for:),
-                                    onDoubleTapLike: viewModel.doubleTapLike
+                                    heightForItem: { item, tileWidth in
+                                        tileWidth * ThreadItemImageSizing.heightRatio(for: item)
+                                    },
+                                    content: { item, tileWidth in
+                                        NavigationLink {
+                                            ThreadItemDetailView(item: item)
+                                        } label: {
+                                            DiscoverItemTile(
+                                                item: item,
+                                                owner: viewModel.owner(for: item),
+                                                tileWidth: tileWidth
+                                            )
+                                        }
+                                        .buttonStyle(.plain)
+                                        .frame(width: tileWidth, height: tileWidth * ThreadItemImageSizing.heightRatio(for: item))
+                                        .clipped()
+                                        .simultaneousGesture(
+                                            TapGesture(count: 2)
+                                                .onEnded { viewModel.doubleTapLike(item) }
+                                        )
+                                    }
                                 )
                             }
                         }
@@ -63,7 +80,7 @@ struct DiscoverView: View {
             .safeAreaInset(edge: .top) {
                 filterBar
                     .padding(.horizontal, AppTheme.pagePadding)
-                    .padding(.vertical, 8)
+                    .padding(.vertical, AppTheme.tightSpacing)
                     .background(.ultraThinMaterial)
                     .overlay(alignment: .bottom) {
                         Rectangle()
@@ -78,25 +95,25 @@ struct DiscoverView: View {
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: AppTheme.compactSpacing) {
             Text("Discover")
                 .font(AppTheme.titleFont(size: 30))
                 .foregroundStyle(AppTheme.ink)
-                .padding(.top, 6)
+                .padding(.top, AppTheme.xSmallSpacing)
 
             Text("ThreadShare")
                 .font(AppTheme.brandFont(size: 42))
-                .fontWeight(.bold)
                 .foregroundStyle(AppTheme.ink)
 
             Text("DISCOVER THE FIT. BORROW THE LOOK. WEAR THE STORY.")
-                .font(AppTheme.titleFont(size: 20))
+                .font(AppTheme.titleFont(size: 18))
                 .foregroundStyle(AppTheme.ink)
-                .padding(.top, -5)
+                .padding(.top, -2)
                 .lineLimit(2)
+                .tracking(0.8)
 
             Text("Browse standout pieces from friends, follows, and public closets.")
-                .font(AppTheme.bodyFont(size: 21))
+                .font(AppTheme.bodyFont(size: 16))
                 .foregroundStyle(AppTheme.mutedInk)
         }
     }
@@ -116,10 +133,10 @@ struct DiscoverView: View {
                     isShowingFilters = true
                 } label: {
                     Label("Filters", systemImage: "slider.horizontal.3")
-                        .font(AppTheme.bodyFont(size: 16))
-                        .foregroundStyle(AppTheme.accent)
+                        .font(AppTheme.bodyFont(size: 15, weight: .semibold))
+                        .foregroundStyle(AppTheme.ink)
                         .padding(.horizontal, 14)
-                        .frame(height: 38)
+                        .frame(height: AppTheme.pillHeight)
                         .background(AppTheme.accentSoft, in: Capsule())
                 }
                 .buttonStyle(.plain)
@@ -127,66 +144,6 @@ struct DiscoverView: View {
         }
     }
 
-}
-
-private struct DiscoverMasonryGrid: View {
-    let items: [ThreadItem]
-    let spacing: CGFloat
-    let availableWidth: CGFloat
-    let columnCount: Int
-    let ownerForItem: (ThreadItem) -> UserProfile?
-    let onDoubleTapLike: (ThreadItem) -> Void
-
-    private var tileWidth: CGFloat {
-        let columns = max(columnCount, 1)
-        let totalSpacing = spacing * CGFloat(max(columns - 1, 0))
-        return max(120, (availableWidth - totalSpacing) / CGFloat(columns))
-    }
-
-    var body: some View {
-        HStack(alignment: .top, spacing: spacing) {
-            ForEach(0..<max(columnCount, 1), id: \.self) { columnIndex in
-                LazyVStack(spacing: spacing) {
-                    ForEach(columnItems[columnIndex]) { item in
-                        NavigationLink {
-                            ThreadItemDetailView(item: item)
-                        } label: {
-                            DiscoverItemTile(
-                                item: item,
-                                owner: ownerForItem(item),
-                                tileWidth: tileWidth
-                            )
-                        }
-                        .buttonStyle(.plain)
-                        .frame(width: tileWidth, height: tileWidth * ThreadItemImageSizing.heightRatio(for: item))
-                        .clipped()
-                        .simultaneousGesture(
-                            TapGesture(count: 2)
-                                .onEnded { onDoubleTapLike(item) }
-                        )
-                    }
-                }
-                .frame(width: tileWidth)
-                .clipped()
-            }
-        }
-        .frame(width: availableWidth, alignment: .topLeading)
-    }
-
-    private var columnItems: [[ThreadItem]] {
-        let columns = max(columnCount, 1)
-        var distributed = Array(repeating: [ThreadItem](), count: columns)
-        var heights = Array(repeating: CGFloat.zero, count: columns)
-
-        for item in items {
-            guard let targetColumn = heights.enumerated().min(by: { $0.element < $1.element })?.offset else {
-                continue
-            }
-            distributed[targetColumn].append(item)
-            heights[targetColumn] += tileWidth * ThreadItemImageSizing.heightRatio(for: item) + spacing
-        }
-        return distributed
-    }
 }
 
 private struct DiscoverItemTile: View {

@@ -22,7 +22,7 @@ struct FilterSheetView: View {
                 AppTheme.background.ignoresSafeArea()
 
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 20) {
+                    VStack(alignment: .leading, spacing: AppTheme.sectionSpacing) {
                         availableToggle
 
                         pickerSection(title: "Color") {
@@ -72,7 +72,7 @@ struct FilterSheetView: View {
                     Button("Done") {
                         dismiss()
                     }
-                    .fontWeight(.semibold)
+                    .font(AppTheme.bodyFont(size: 14, weight: .semibold))
                 }
             }
             .onAppear {
@@ -86,7 +86,7 @@ struct FilterSheetView: View {
 
     private var availableToggle: some View {
         Toggle(isOn: $draftFilter.availableNowOnly) {
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: AppTheme.xSmallSpacing) {
                 Text("Available now")
                     .font(AppTheme.titleFont(size: 18))
                     .foregroundStyle(AppTheme.ink)
@@ -96,7 +96,7 @@ struct FilterSheetView: View {
                     .foregroundStyle(AppTheme.mutedInk)
             }
         }
-        .padding(16)
+        .padding(AppTheme.cardPadding)
         .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous)
@@ -105,7 +105,7 @@ struct FilterSheetView: View {
     }
 
     private var actionButtons: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: AppTheme.tightSpacing) {
             SecondaryButton(title: "Reset", systemImage: "arrow.counterclockwise") {
                 draftFilter = ThreadFilter()
                 appState.applyFilter(draftFilter)
@@ -116,7 +116,7 @@ struct FilterSheetView: View {
                 dismiss()
             }
         }
-        .padding(.top, 4)
+        .padding(.top, AppTheme.microSpacing)
     }
 
     private var trailingToolbarPlacement: ToolbarItemPlacement {
@@ -128,11 +128,11 @@ struct FilterSheetView: View {
     }
 
     private func pickerSection<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: AppTheme.tightSpacing) {
             SectionTitle(title)
             content()
         }
-        .padding(16)
+        .padding(AppTheme.cardPadding)
         .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous)
@@ -152,7 +152,7 @@ struct FilterSheetView: View {
         }
         .pickerStyle(.menu)
         .tint(AppTheme.accent)
-        .font(AppTheme.bodyFont(size: 15))
+        .font(AppTheme.bodyFont(size: 15, weight: .medium))
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

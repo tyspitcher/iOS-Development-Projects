@@ -75,6 +75,20 @@ struct EditProfileSheetView: View {
                     }
                     .toggleStyle(.switch)
                     .accessibilityHint("Turn off to keep your closet private.")
+
+                    Toggle(isOn: $viewModel.requiresFollowerApproval) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Approve followers")
+                                .font(AppTheme.bodyFont(size: 14))
+                                .foregroundStyle(AppTheme.ink)
+
+                            Text("When on, new followers must send a request before they can follow you.")
+                                .font(AppTheme.bodyFont(size: 12))
+                                .foregroundStyle(AppTheme.mutedInk)
+                        }
+                    }
+                    .toggleStyle(.switch)
+                    .accessibilityHint("Require approval before someone can follow you.")
                 }
 
                 Section("Preferences") {

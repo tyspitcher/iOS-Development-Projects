@@ -81,6 +81,10 @@ struct BorrowViewModel {
         appState.borrowerMarkedRequestReturned(request.id)
     }
 
+    func toggleReturnedState(for request: BorrowRequest) {
+        appState.borrowerToggledReturnedState(request.id)
+    }
+
     func confirmReturnedByOwner(_ request: BorrowRequest) {
         appState.ownerConfirmedRequestReturned(request.id)
     }
@@ -108,7 +112,18 @@ struct BorrowViewModel {
 
     func canMarkReturnedByBorrower(_ request: BorrowRequest) -> Bool {
         guard let currentUser = appState.currentUser else { return false }
-        return request.requesterID == currentUser.id && request.status == .approved
+        return request.requesterID == currentUser.id &&
+            (request.status == .approved || request.status == .returnPendingOwnerConfirmation)
+    }
+
+    func returnedStateButtonTitle(for request: BorrowRequest) -> String {
+        request.status == .returnPendingOwnerConfirmation ? "Undo Returned" : "Mark Returned"
+    }
+
+    func returnedStateButtonIcon(for request: BorrowRequest) -> String {
+        request.status == .returnPendingOwnerConfirmation
+            ? "arrow.uturn.backward"
+            : "arrow.uturn.backward.circle.fill"
     }
 
     func canConfirmReturnedByOwner(_ request: BorrowRequest) -> Bool {

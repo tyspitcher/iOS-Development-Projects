@@ -87,6 +87,7 @@ final class SupabaseAuthService {
             style_interests: profile.styleInterests,
             favorite_brands: profile.favoriteBrands,
             color_palette_preference_ids: profile.colorPalettePreferenceIDs,
+            requires_follower_approval: profile.requiresFollowerApproval,
             follower_count: profile.followerCount,
             following_count: profile.followingCount,
             created_at: Date(),

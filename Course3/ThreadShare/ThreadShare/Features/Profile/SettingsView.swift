@@ -53,6 +53,7 @@ struct SettingsView: View {
     @EnvironmentObject private var sessionStore: SupabaseSessionStore
     @AppStorage(AppearanceMode.storageKey) private var appearanceModeRaw = AppearanceMode.system.rawValue
     @State private var activeAlert: SettingsAlert?
+    @State private var pendingUnblockUser: UserProfile?
     @State private var isShowingDeletionRequestConfirmation = false
     @State private var isShowingDeletionCancelConfirmation = false
     @State private var isShowingImmediateDeletionConfirmation = false
@@ -84,6 +85,7 @@ struct SettingsView: View {
             socialSection
             supportSection
             legalSection
+            blockedUsersSection
             sessionSection
         }
         .scrollContentBackground(.hidden)
@@ -119,6 +121,16 @@ struct SettingsView: View {
                 title: Text(alert.title),
                 message: Text(alert.message),
                 dismissButton: .default(Text("OK"))
+            )
+        }
+        .alert(item: $pendingUnblockUser) { user in
+            Alert(
+                title: Text("Unblock \(user.displayName)?"),
+                message: Text("This will let \(user.displayName) appear again in search, closets, and social surfaces where appropriate."),
+                primaryButton: .destructive(Text("Unblock")) {
+                    _ = appState.unblockUser(user.id)
+                },
+                secondaryButton: .cancel()
             )
         }
         .sheet(isPresented: $isShowingImmediateDeletionConfirmation) {
@@ -296,6 +308,57 @@ struct SettingsView: View {
         }
     }
 
+    private var blockedUsersSection: some View {
+        Section {
+            if appState.blockedUsers.isEmpty {
+                Text("You have not blocked anyone.")
+                    .font(AppTheme.bodyFont(size: 14))
+                    .foregroundStyle(AppTheme.mutedInk)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .listRowBackground(AppTheme.surface)
+            } else {
+                Text("People you block will be listed here so you can review or unblock them later.")
+                    .font(AppTheme.bodyFont(size: 13))
+                    .foregroundStyle(AppTheme.mutedInk)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .listRowBackground(AppTheme.surface)
+
+                ForEach(appState.blockedUsers) { user in
+                    HStack(spacing: 12) {
+                        UserAvatarView(imageName: user.avatarImageName, size: 34)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(user.displayName)
+                                .font(AppTheme.bodyFont(size: 15))
+                                .foregroundStyle(AppTheme.ink)
+                            Text("@\(user.username)")
+                                .font(AppTheme.bodyFont(size: 12))
+                                .foregroundStyle(AppTheme.mutedInk)
+                        }
+
+                        Spacer()
+
+                        Button {
+                            pendingUnblockUser = user
+                        } label: {
+                            Label("Unblock", systemImage: "arrow.uturn.backward")
+                                .font(AppTheme.bodyFont(size: 13, weight: .semibold))
+                                .foregroundStyle(AppTheme.accent)
+                                .padding(.horizontal, 12)
+                                .frame(height: 34)
+                                .background(AppTheme.accentSoft, in: Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.vertical, 4)
+                    .listRowBackground(AppTheme.surface)
+                }
+            }
+        } header: {
+            sectionHeader("Blocked Users", systemImage: "hand.raised.fill")
+        }
+    }
+
     private var sessionSection: some View {
         Section {
             if sessionStore.session != nil {
@@ -326,7 +389,7 @@ struct SettingsView: View {
 
     private func sectionHeader(_ title: String, systemImage: String) -> some View {
         Label(title, systemImage: systemImage)
-            .font(AppTheme.bodyFont(size: 13).weight(.semibold))
+            .font(AppTheme.bodyFont(size: 13, weight: .semibold))
             .foregroundStyle(AppTheme.accent)
     }
 
@@ -369,7 +432,7 @@ struct SettingsView: View {
     private var accountDeletionControls: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Recommended")
-                .font(AppTheme.bodyFont(size: 13).weight(.semibold))
+                .font(AppTheme.bodyFont(size: 13, weight: .semibold))
                 .foregroundStyle(AppTheme.accent)
                 .listRowBackground(AppTheme.surface)
 
@@ -407,7 +470,7 @@ struct SettingsView: View {
 
         VStack(alignment: .leading, spacing: 8) {
             Text("Advanced")
-                .font(AppTheme.bodyFont(size: 13).weight(.semibold))
+                .font(AppTheme.bodyFont(size: 13, weight: .semibold))
                 .foregroundStyle(AppTheme.mutedInk)
                 .listRowBackground(AppTheme.surface)
 
@@ -431,7 +494,7 @@ struct SettingsView: View {
     private func deletionStatusCard(_ request: AccountDeletionRequest) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Label("Deletion request pending", systemImage: "clock.badge.exclamationmark")
-                .font(AppTheme.bodyFont(size: 15).weight(.semibold))
+                .font(AppTheme.bodyFont(size: 15, weight: .semibold))
                 .foregroundStyle(AppTheme.warmAccentHighlight)
 
             Text("Scheduled for \(request.scheduledDeletionDate.formatted(date: .abbreviated, time: .shortened)).")
@@ -451,7 +514,7 @@ struct SettingsView: View {
     private func immediateDeletionNoticeCard(_ notice: ImmediateAccountDeletionNotice) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Label("Immediate deletion not completed", systemImage: "bolt.shield")
-                .font(AppTheme.bodyFont(size: 15).weight(.semibold))
+                .font(AppTheme.bodyFont(size: 15, weight: .semibold))
                 .foregroundStyle(AppTheme.warmAccentHighlight)
 
             Text("Recorded on \(notice.requestedAt.formatted(date: .abbreviated, time: .shortened)).")

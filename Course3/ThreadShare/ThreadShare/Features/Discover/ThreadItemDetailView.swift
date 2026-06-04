@@ -6,21 +6,27 @@
 //
 
 import SwiftUI
+#if canImport(SafariServices)
+import SafariServices
+#endif
 
 struct ThreadItemDetailView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
     @FocusState private var isCommentFieldFocused: Bool
     @State private var isShowingBorrowRequest = false
     @State private var isShowingDM = false
     @State private var isShowingComments = false
-    @State private var didTapTagFriend = false
+    @State private var isShowingPurchaseLinkSheet = false
+    @State private var isShowingLinkReportSheet = false
+    @State private var isShowingFriendTagSheet = false
+    @State private var isShowingFriendTaggedConfirmation = false
     @State private var isShowingRequestSentAlert = false
     @State private var isShowingDeleteConfirmation = false
     @State private var isShowingReportConfirmation = false
     @State private var isShowingReportSubmitted = false
-    @State private var isShowingBlockConfirmation = false
-    @State private var isShowingBlockCompleted = false
+    @State private var selectedLinkReportReason: ItemReportReason = .brokenLink
     @State private var commentDraft = ""
 
     let item: ThreadItem
@@ -49,10 +55,6 @@ struct ThreadItemDetailView: View {
         viewModel.canRequestBorrow
     }
 
-    private var shouldShowConnectionActions: Bool {
-        viewModel.shouldShowConnectionActions
-    }
-
     private var canOwnerToggleAvailability: Bool {
         viewModel.canOwnerToggleAvailability
     }
@@ -72,6 +74,7 @@ struct ThreadItemDetailView: View {
                     titleCard
                     actionRow
                     detailsCard
+                    moderationActions
                 }
                 .padding(AppTheme.pagePadding)
             }
@@ -90,11 +93,36 @@ struct ThreadItemDetailView: View {
             DMChatView(owner: owner ?? fallbackOwner, item: currentItem)
                 .environmentObject(appState)
         }
+        .sheet(isPresented: $isShowingPurchaseLinkSheet) {
+            if let purchaseLink = currentItem.purchaseLink {
+                purchaseLinkSheet(for: purchaseLink)
+            } else {
+                EmptyView()
+            }
+        }
+        .sheet(isPresented: $isShowingLinkReportSheet) {
+            if let purchaseLink = currentItem.purchaseLink {
+                linkReportSheet(for: purchaseLink)
+            } else {
+                EmptyView()
+            }
+        }
+        .sheet(isPresented: $isShowingFriendTagSheet) {
+            NavigationStack {
+                FriendListView(selectionAction: { friend in
+                    guard appState.tagFriend(friend.id, for: currentItem) else { return }
+                    isShowingFriendTagSheet = false
+                    isShowingFriendTaggedConfirmation = true
+                })
+                .environmentObject(appState)
+                .navigationTitle("Tag Friend")
+                .navigationBarTitleDisplayMode(.inline)
+            }
+            .presentationDetents([.medium, .large])
+        }
         .sheet(isPresented: $isShowingComments) {
             NavigationStack {
-                commentsCard
-                    .padding(AppTheme.pagePadding)
-                    .background(AppTheme.background)
+                commentsSheet
                     .navigationTitle("Comments")
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
@@ -114,13 +142,13 @@ struct ThreadItemDetailView: View {
         }
         .alert("Delete item?", isPresented: $isShowingDeleteConfirmation) {
             Button("Cancel", role: .cancel) {}
-            Button("Delete", role: .destructive) {
+            Button("Delete Item", role: .destructive) {
                 if viewModel.deleteItem() {
                     dismiss()
                 }
             }
         } message: {
-            Text("This removes the item from your closet and clears related borrow activity.")
+            Text("This will remove the item from your closet and clear related borrow activity.")
         }
         .alert("Report item?", isPresented: $isShowingReportConfirmation) {
             Button("Cancel", role: .cancel) {}
@@ -129,29 +157,17 @@ struct ThreadItemDetailView: View {
                 isShowingReportSubmitted = true
             }
         } message: {
-            Text("This sends a moderation report for review.")
+            Text("This will send a moderation report for review.")
         }
         .alert("Report submitted", isPresented: $isShowingReportSubmitted) {
             Button("OK", role: .cancel) {}
         } message: {
             Text("Thanks. Your report has been submitted for review.")
         }
-        .alert("Block user?", isPresented: $isShowingBlockConfirmation) {
-            Button("Cancel", role: .cancel) {}
-            Button("Block User", role: .destructive) {
-                if viewModel.blockOwner() {
-                    isShowingBlockCompleted = true
-                }
-            }
+        .alert("Friend tagged", isPresented: $isShowingFriendTaggedConfirmation) {
+            Button("OK", role: .cancel) {}
         } message: {
-            Text("Blocking limits visibility and interactions in ThreadShare. Their items will be hidden from your feed, and they will no longer appear in friend search where practical.")
-        }
-        .alert("User blocked", isPresented: $isShowingBlockCompleted) {
-            Button("OK", role: .cancel) {
-                dismiss()
-            }
-        } message: {
-            Text("This user’s content and social surfaces will be limited in ThreadShare.")
+            Text("Your friend has been tagged and will be notified.")
         }
     }
 
@@ -173,9 +189,9 @@ struct ThreadItemDetailView: View {
         DetailHeroImage(item: currentItem)
             .frame(maxWidth: .infinity)
             .aspectRatio(1 / ThreadItemImageSizing.heightRatio(for: currentItem), contentMode: .fit)
-            .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: 33, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                RoundedRectangle(cornerRadius: 33, style: .continuous)
                     .stroke(AppTheme.strongBorder, lineWidth: 1)
             )
             .overlay(alignment: .bottomTrailing) {
@@ -204,9 +220,11 @@ struct ThreadItemDetailView: View {
     @ViewBuilder
     private var shopLinkCard: some View {
         if let purchaseLink = currentItem.purchaseLink {
-            Link(destination: purchaseLink) {
+            Button {
+                isShowingPurchaseLinkSheet = true
+            } label: {
                 HStack(alignment: .center, spacing: 12) {
-                    Image(systemName: "bag.fill")
+                    Image(systemName: "safari.fill")
                         .font(.system(size: 17, weight: .semibold))
                         .foregroundStyle(AppTheme.accent)
                         .frame(width: 34, height: 34)
@@ -239,6 +257,7 @@ struct ThreadItemDetailView: View {
                 .shadow(color: AppTheme.softShadow, radius: 12, x: 0, y: 8)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Open buy now listing")
         }
     }
 
@@ -268,10 +287,6 @@ struct ThreadItemDetailView: View {
         VStack(alignment: .leading, spacing: 16) {
             if let owner, !isOwnedByCurrentUser {
                 ownerRow(owner)
-            }
-
-            if let owner, shouldShowConnectionActions {
-                connectionActions(for: owner)
             }
 
             VStack(alignment: .leading, spacing: 8) {
@@ -369,28 +384,37 @@ struct ThreadItemDetailView: View {
             }
 
             detailActionButton(title: "Tag Friend", systemImage: "person.crop.circle.badge.plus") {
-                didTapTagFriend.toggle()
-            }
-
-            if !isOwnedByCurrentUser {
-                detailActionButton(title: "Report Item", systemImage: "flag.fill") {
-                    isShowingReportConfirmation = true
-                }
-
-                if viewModel.canBlockOwner {
-                    detailActionButton(title: "Block User", systemImage: "hand.raised.fill") {
-                        isShowingBlockConfirmation = true
-                    }
-                }
-            }
-
-            if didTapTagFriend {
-                Text("Friend tag added.")
-                    .font(AppTheme.bodyFont(size: 12))
-                    .foregroundStyle(AppTheme.mutedInk)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                isShowingFriendTagSheet = true
             }
         }
+    }
+
+    private var moderationActions: some View {
+        guard !isOwnedByCurrentUser else {
+            return AnyView(EmptyView())
+        }
+
+        return AnyView(
+            secondaryModerationButton(title: "Report Item", systemImage: "flag.fill") {
+                isShowingReportConfirmation = true
+            }
+        )
+    }
+
+    private func secondaryModerationButton(title: String, systemImage: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: systemImage)
+                .font(AppTheme.bodyFont(size: 14, weight: .medium))
+                .foregroundStyle(AppTheme.mutedInk)
+                .frame(maxWidth: .infinity)
+                .frame(height: 42)
+                .background(AppTheme.surface.opacity(0.8), in: RoundedRectangle(cornerRadius: AppTheme.smallCornerRadius, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppTheme.smallCornerRadius, style: .continuous)
+                        .stroke(AppTheme.border.opacity(0.7), lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
     }
 
     private func submitReport() {
@@ -401,46 +425,201 @@ struct ThreadItemDetailView: View {
         )
     }
 
-    private var commentsCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                SectionTitle("Comments")
-                Spacer()
-                Text("\(comments.count)")
-                    .font(AppTheme.bodyFont(size: 12))
-                    .foregroundStyle(AppTheme.mutedInk)
-            }
+    private func submitLinkReport(for purchaseLink: URL) {
+        let details = [
+            "Reported from item detail purchase link.",
+            "Reason: \(selectedLinkReportReason.rawValue)",
+            "Item: \(currentItem.title)",
+            "Brand: \(currentItem.brand)",
+            "Purchase link: \(purchaseLink.absoluteString)"
+        ]
+        .joined(separator: "\n")
 
-            commentComposer
+        appState.submitItemReport(
+            itemID: currentItem.id,
+            reason: selectedLinkReportReason,
+            details: details
+        )
 
-            if comments.isEmpty {
-                Text("No comments yet. Start the conversation on this item.")
-                    .font(AppTheme.bodyFont(size: 13))
-                    .foregroundStyle(AppTheme.mutedInk)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            } else {
-                VStack(spacing: 0) {
-                    ForEach(Array(comments.enumerated()), id: \.element.id) { index, comment in
-                        commentRow(comment)
+        if let mailtoURL = makeDeveloperMailtoURL(for: purchaseLink) {
+            openURL(mailtoURL)
+        }
+    }
 
-                        if index < comments.count - 1 {
-                            Divider()
-                                .overlay(AppTheme.border)
+    private func makeDeveloperMailtoURL(for purchaseLink: URL) -> URL? {
+        let subject = "ThreadShare link report: \(currentItem.title)"
+        let body = """
+        Link report reason: \(selectedLinkReportReason.rawValue)
+
+        Item: \(currentItem.title)
+        Brand: \(currentItem.brand)
+        Purchase link: \(purchaseLink.absoluteString)
+
+        Additional context:
+        """
+
+        var components = URLComponents()
+        components.scheme = "mailto"
+        components.path = "tyspitcher@gmail.com"
+        components.queryItems = [
+            URLQueryItem(name: "subject", value: subject),
+            URLQueryItem(name: "body", value: body)
+        ]
+        return components.url
+    }
+
+    @ViewBuilder
+    private func purchaseLinkSheet(for purchaseLink: URL) -> some View {
+        NavigationStack {
+            safariWebView(for: purchaseLink)
+                .navigationTitle("Buy Now Online")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button("Report Link") {
+                            isShowingPurchaseLinkSheet = false
+                            isShowingLinkReportSheet = true
+                        }
+                    }
+
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Open in Safari") {
+                            openURL(purchaseLink)
+                        }
+                    }
+
+                    ToolbarItem(placement: .bottomBar) {
+                        Button("Done") {
+                            isShowingPurchaseLinkSheet = false
                         }
                     }
                 }
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    @ViewBuilder
+    private func safariWebView(for url: URL) -> some View {
+#if canImport(SafariServices)
+        SafariWebView(url: url)
+#else
+        VStack(spacing: 14) {
+            Image(systemName: "safari")
+                .font(.system(size: 36, weight: .semibold))
+                .foregroundStyle(AppTheme.accent)
+
+            Text("Web preview unavailable on this platform.")
+                .font(AppTheme.bodyFont(size: 15, weight: .medium))
+                .foregroundStyle(AppTheme.ink)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(AppTheme.background)
+#endif
+    }
+
+    private func linkReportSheet(for purchaseLink: URL) -> some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Text("Choose the best reason for reporting this link.")
+                        .font(AppTheme.bodyFont(size: 14))
+                        .foregroundStyle(AppTheme.mutedInk)
+                }
+
+                Section("Report Reason") {
+                    Picker("Reason", selection: $selectedLinkReportReason) {
+                        ForEach(ItemReportReason.linkReportCases) { reason in
+                            Text(reason.rawValue).tag(reason)
+                        }
+                    }
+                    .pickerStyle(.inline)
+                }
+
+                Section {
+                    Text("We will submit the report and email the developer with the link details.")
+                        .font(AppTheme.bodyFont(size: 13))
+                        .foregroundStyle(AppTheme.mutedInk)
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(AppTheme.background)
+            .navigationTitle("Report Link")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Cancel") {
+                        isShowingLinkReportSheet = false
+                    }
+                }
+
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Send") {
+                        submitLinkReport(for: purchaseLink)
+                        isShowingLinkReportSheet = false
+                    }
+                    .fontWeight(.semibold)
+                }
             }
         }
-        .padding(18)
-        .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous)
-                .stroke(AppTheme.border, lineWidth: 1)
-        )
+        .presentationDetents([.medium, .large])
+    }
+
+    private var commentsSheet: some View {
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: AppTheme.tightSpacing) {
+                    HStack {
+                        SectionTitle("Comments")
+                        Spacer()
+                        Text("\(comments.count)")
+                            .font(AppTheme.bodyFont(size: 12, weight: .medium))
+                            .foregroundStyle(AppTheme.mutedInk)
+                    }
+
+                    if comments.isEmpty {
+                        Text("No comments yet. Start the conversation on this item.")
+                            .font(AppTheme.bodyFont(size: 13, weight: .medium))
+                            .foregroundStyle(AppTheme.mutedInk)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, AppTheme.tightSpacing)
+                            .padding(.vertical, AppTheme.xSmallSpacing)
+                    } else {
+                        VStack(spacing: 0) {
+                            ForEach(Array(comments.enumerated()), id: \.element.id) { index, comment in
+                                commentRow(comment)
+
+                                if index < comments.count - 1 {
+                                    Divider()
+                                        .overlay(AppTheme.border)
+                                }
+                            }
+                        }
+                        .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous)
+                                .stroke(AppTheme.border, lineWidth: 1)
+                        )
+                    }
+                }
+                .padding(.horizontal, AppTheme.pagePadding)
+                .padding(.top, AppTheme.pagePadding)
+                .padding(.bottom, AppTheme.cardPadding)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+
+            Divider()
+                .overlay(AppTheme.border)
+
+            commentComposer
+                .padding(AppTheme.pagePadding)
+                .background(AppTheme.surface)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(AppTheme.background)
     }
 
     private var commentComposer: some View {
-        HStack(alignment: .bottom, spacing: 12) {
+        HStack(alignment: .bottom, spacing: AppTheme.tightSpacing) {
             TextField("Add a comment", text: $commentDraft, axis: .vertical)
                 .font(AppTheme.bodyFont(size: 15))
                 .textFieldStyle(.plain)
@@ -459,10 +638,11 @@ struct ThreadItemDetailView: View {
                 commentDraft = ""
                 isCommentFieldFocused = false
             }
-            .font(AppTheme.bodyFont(size: 15))
+            .font(AppTheme.bodyFont(size: 15, weight: .semibold))
             .foregroundStyle(canPostComment ? AppTheme.accent : AppTheme.mutedInk)
             .disabled(!canPostComment)
         }
+        .padding(.horizontal, AppTheme.tightSpacing)
     }
 
     private var canPostComment: Bool {
@@ -513,6 +693,7 @@ struct ThreadItemDetailView: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .padding(.horizontal, AppTheme.tightSpacing)
         .padding(.vertical, 12)
     }
 
@@ -564,82 +745,6 @@ struct ThreadItemDetailView: View {
             if !isOwnedByCurrentUser {
                 RelationshipBadge(relationship: owner.relationship)
             }
-        }
-    }
-
-    private func connectionActions(for owner: UserProfile) -> some View {
-        HStack(spacing: 10) {
-            SecondaryButton(
-                title: owner.isFollowedByCurrentUser ? "Following" : "Follow",
-                systemImage: owner.isFollowedByCurrentUser ? "checkmark.circle.fill" : "plus.circle"
-            ) {
-                viewModel.followOwnerIfNeeded()
-            }
-
-            friendRequestButton
-        }
-    }
-
-    private var friendRequestButton: some View {
-        let state = viewModel.friendConnectionState
-        let isDisabled = state != .addFriend
-
-        return Button {
-            viewModel.requestFriendIfNeeded()
-        } label: {
-            Label(friendRequestTitle(for: state), systemImage: friendRequestIcon(for: state))
-                .font(AppTheme.bodyFont(size: 16))
-                .foregroundStyle(friendRequestForeground(for: state))
-                .frame(maxWidth: .infinity)
-                .frame(height: 48)
-                .background(friendRequestBackground(for: state), in: RoundedRectangle(cornerRadius: AppTheme.smallCornerRadius, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppTheme.smallCornerRadius, style: .continuous)
-                        .stroke(friendRequestBorder(for: state), lineWidth: 1)
-                )
-        }
-        .buttonStyle(.plain)
-        .disabled(isDisabled)
-        .accessibilityLabel(friendRequestTitle(for: state))
-    }
-
-    private func friendRequestTitle(for state: FriendConnectionState) -> String {
-        switch state {
-        case .addFriend: "Request Friend"
-        case .requested: "Request Sent"
-        case .incomingRequest: "Requested You"
-        case .friends: "Friends"
-        }
-    }
-
-    private func friendRequestIcon(for state: FriendConnectionState) -> String {
-        switch state {
-        case .addFriend: "person.badge.plus"
-        case .requested: "paperplane.fill"
-        case .incomingRequest: "person.crop.circle.badge.questionmark"
-        case .friends: "person.2.fill"
-        }
-    }
-
-    private func friendRequestForeground(for state: FriendConnectionState) -> Color {
-        switch state {
-        case .addFriend: AppTheme.ink
-        case .requested, .incomingRequest: AppTheme.accent
-        case .friends: AppTheme.ink
-        }
-    }
-
-    private func friendRequestBackground(for state: FriendConnectionState) -> Color {
-        switch state {
-        case .addFriend, .friends: AppTheme.surface
-        case .requested, .incomingRequest: AppTheme.accentSoft
-        }
-    }
-
-    private func friendRequestBorder(for state: FriendConnectionState) -> Color {
-        switch state {
-        case .addFriend, .friends: AppTheme.border
-        case .requested, .incomingRequest: AppTheme.accent.opacity(0.45)
         }
     }
 
@@ -764,3 +869,21 @@ struct ThreadItemDetailView_Previews: PreviewProvider {
         }
     }
 }
+
+private extension ItemReportReason {
+    static var linkReportCases: [ItemReportReason] {
+        [.brokenLink, .linkInappropriate, .notCorrectItem, .other]
+    }
+}
+
+#if canImport(SafariServices)
+private struct SafariWebView: UIViewControllerRepresentable {
+    let url: URL
+
+    func makeUIViewController(context: Context) -> SFSafariViewController {
+        SFSafariViewController(url: url)
+    }
+
+    func updateUIViewController(_ uiViewController: SFSafariViewController, context: Context) {}
+}
+#endif

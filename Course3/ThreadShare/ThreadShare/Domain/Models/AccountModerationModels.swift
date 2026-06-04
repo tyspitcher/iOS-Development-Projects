@@ -76,6 +76,9 @@ enum ItemReportReason: String, CaseIterable, Codable, Identifiable {
     case misleading = "Misleading Listing"
     case spam = "Spam"
     case counterfeit = "Counterfeit Concern"
+    case brokenLink = "Broken Link"
+    case linkInappropriate = "Inappropriate"
+    case notCorrectItem = "Not the Correct Item"
     case other = "Other"
 
     var id: String { rawValue }

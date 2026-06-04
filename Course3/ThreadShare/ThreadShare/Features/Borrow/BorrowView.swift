@@ -21,7 +21,7 @@ struct BorrowView: View {
                 AppTheme.background.ignoresSafeArea()
 
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 22) {
+                    VStack(alignment: .leading, spacing: AppTheme.sectionSpacing + 4) {
                         header
 
                         if viewModel.isEmpty {
@@ -74,10 +74,9 @@ struct BorrowView: View {
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: AppTheme.compactSpacing) {
             Text("ThreadShare")
                 .font(AppTheme.brandFont(size: 40))
-                .fontWeight(.bold)
                 .foregroundStyle(AppTheme.ink)
 
             Text("Borrow Board")
@@ -105,7 +104,7 @@ struct BorrowView: View {
                 { selectedItem = tappedItem }
             },
             onMarkReturnedByBorrower: viewModel.canMarkReturnedByBorrower(request)
-                ? { viewModel.markReturnedByBorrower(request) }
+                ? { viewModel.toggleReturnedState(for: request) }
                 : nil,
             onConfirmReturnedByOwner: viewModel.canConfirmReturnedByOwner(request)
                 ? { viewModel.confirmReturnedByOwner(request) }
@@ -130,7 +129,7 @@ private struct BorrowSection<RowContent: View>: View {
     let rowContent: (BorrowRequest) -> RowContent
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: AppTheme.tightSpacing) {
             SectionTitle(title)
 
             if requests.isEmpty {
@@ -138,7 +137,7 @@ private struct BorrowSection<RowContent: View>: View {
                     .font(AppTheme.bodyFont(size: 15))
                     .foregroundStyle(AppTheme.mutedInk)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(16)
+                    .padding(AppTheme.cardPadding)
                     .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: AppTheme.smallCornerRadius, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: AppTheme.smallCornerRadius, style: .continuous)
@@ -170,70 +169,83 @@ private struct BorrowRequestRow: View {
     var onSetReminder: ((ReturnReminderCadence?) -> Void)?
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            thumbnail
+        VStack(alignment: .leading, spacing: AppTheme.contentSpacing) {
+            HStack(alignment: .top, spacing: 12) {
+                thumbnail
 
-            VStack(alignment: .leading, spacing: 7) {
-                HStack(alignment: .top, spacing: 8) {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(item?.title ?? "Borrowed piece")
-                            .font(AppTheme.titleFont(size: 20))
-                            .foregroundStyle(AppTheme.ink)
-                            .lineLimit(2)
+                VStack(alignment: .leading, spacing: AppTheme.xSmallSpacing) {
+                    HStack(alignment: .top, spacing: 8) {
+                        VStack(alignment: .leading, spacing: AppTheme.microSpacing) {
+                            Text(item?.title ?? "Borrowed piece")
+                                .font(AppTheme.titleFont(size: 20))
+                                .foregroundStyle(AppTheme.ink)
+                                .lineLimit(2)
 
-                        Text("\(personRole.label): \(personName)")
-                            .font(AppTheme.bodyFont(size: 15))
-                            .foregroundStyle(AppTheme.mutedInk)
-                            .lineLimit(1)
-                    }
-
-                    Spacer()
-
-                    InfoChip(title: request.status.displayName, systemImage: statusIcon, tint: statusColor)
-                }
-
-                HStack(spacing: 8) {
-                    InfoChip(title: request.requestedStartDate.formatted(date: .abbreviated, time: .omitted), systemImage: "calendar", tint: AppTheme.mutedInk)
-                    InfoChip(title: request.requestedEndDate.formatted(date: .abbreviated, time: .omitted), systemImage: "arrow.right", tint: AppTheme.mutedInk)
-                }
-
-                if let reminderText {
-                    Label(reminderText, systemImage: "bell.fill")
-                        .font(AppTheme.bodyFont(size: 12))
-                        .foregroundStyle(AppTheme.accent)
-                        .padding(.top, 2)
-                }
-
-                if let onSetReminder {
-                    reminderMenu(onSetReminder: onSetReminder)
-                }
-
-                if let onApproveRequest, let onDeclineRequest {
-                    HStack(spacing: 10) {
-                        SecondaryButton(title: "Decline", systemImage: "xmark.circle.fill") {
-                            onDeclineRequest()
+                            Text("\(personRole.label): \(personName)")
+                                .font(AppTheme.bodyFont(size: 15))
+                                .foregroundStyle(AppTheme.mutedInk)
+                                .lineLimit(1)
                         }
 
-                        PrimaryButton(title: "Approve", systemImage: "checkmark.circle.fill") {
-                            onApproveRequest()
+                        Spacer()
+
+                        InfoChip(title: request.status.displayName, systemImage: statusIcon, tint: statusColor)
+                    }
+
+                    HStack(spacing: 8) {
+                        InfoChip(title: request.requestedStartDate.formatted(date: .abbreviated, time: .omitted), systemImage: "calendar", tint: AppTheme.mutedInk)
+                        InfoChip(title: request.requestedEndDate.formatted(date: .abbreviated, time: .omitted), systemImage: "arrow.right", tint: AppTheme.mutedInk)
+                    }
+
+                    if let reminderText {
+                        Label(reminderText, systemImage: "bell.fill")
+                            .font(AppTheme.bodyFont(size: 12, weight: .medium))
+                            .foregroundStyle(AppTheme.accent)
+                            .padding(.top, AppTheme.microSpacing)
+                    }
+                }
+            }
+
+            if onSetReminder != nil || onMarkReturnedByBorrower != nil {
+                HStack(spacing: AppTheme.tightSpacing) {
+                    if let onSetReminder {
+                        reminderMenu(onSetReminder: onSetReminder)
+                            .frame(maxWidth: .infinity)
+                    }
+
+                    if let onMarkReturnedByBorrower {
+                        SecondaryButton(
+                            title: request.status == .returnPendingOwnerConfirmation ? "Undo Returned" : "Mark Returned",
+                            systemImage: request.status == .returnPendingOwnerConfirmation
+                                ? "arrow.uturn.backward"
+                                : "arrow.uturn.backward.circle.fill"
+                        ) {
+                            onMarkReturnedByBorrower()
                         }
+                        .frame(maxWidth: .infinity)
                     }
-                    .padding(.top, 2)
                 }
+                .padding(.top, AppTheme.tightSpacing)
+            }
 
-                if let onMarkReturnedByBorrower {
-                    SecondaryButton(title: "I Returned This Item", systemImage: "arrow.uturn.backward.circle.fill") {
-                        onMarkReturnedByBorrower()
+            if let onApproveRequest, let onDeclineRequest {
+                HStack(spacing: AppTheme.tightSpacing) {
+                    SecondaryButton(title: "Decline", systemImage: "xmark.circle.fill") {
+                        onDeclineRequest()
                     }
-                    .padding(.top, 2)
-                }
 
-                if let onConfirmReturnedByOwner {
-                    PrimaryButton(title: "Confirm Returned", systemImage: "checkmark.seal.fill") {
-                        onConfirmReturnedByOwner()
+                    PrimaryButton(title: "Approve", systemImage: "checkmark.circle.fill") {
+                        onApproveRequest()
                     }
-                    .padding(.top, 2)
                 }
+                .padding(.top, AppTheme.tightSpacing)
+            }
+
+            if let onConfirmReturnedByOwner {
+                PrimaryButton(title: "Confirm Returned", systemImage: "checkmark.seal.fill") {
+                    onConfirmReturnedByOwner()
+                }
+                .padding(.top, AppTheme.tightSpacing)
             }
         }
         .padding(14)
@@ -282,10 +294,10 @@ private struct BorrowRequestRow: View {
             }
         } label: {
             Label(reminderMenuTitle, systemImage: "bell.badge")
-                .font(AppTheme.bodyFont(size: 13).weight(.semibold))
+                .font(AppTheme.bodyFont(size: 13, weight: .semibold))
                 .foregroundStyle(AppTheme.ink)
                 .frame(maxWidth: .infinity)
-                .frame(height: 38)
+                .frame(height: AppTheme.buttonHeight)
                 .background(AppTheme.background, in: RoundedRectangle(cornerRadius: AppTheme.smallCornerRadius, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: AppTheme.smallCornerRadius, style: .continuous)
@@ -296,8 +308,7 @@ private struct BorrowRequestRow: View {
     }
 
     private var reminderMenuTitle: String {
-        guard let reminder else { return "Set Return Reminder" }
-        return "\(reminder.cadence.displayName) Reminder"
+        "Set Reminder"
     }
 
     private var reminderText: String? {

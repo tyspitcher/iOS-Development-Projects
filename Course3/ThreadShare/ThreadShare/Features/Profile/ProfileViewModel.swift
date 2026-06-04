@@ -30,8 +30,20 @@ struct ProfileViewModel {
         appState.incomingFriendRequests.count
     }
 
+    var incomingFollowRequestCount: Int {
+        appState.incomingFollowRequests.count
+    }
+
     var requestedFriendCount: Int {
         appState.requestedFriends.count
+    }
+
+    var requestedFollowCount: Int {
+        appState.requestedFollows.count
+    }
+
+    var totalIncomingRequestCount: Int {
+        incomingFriendRequestCount + incomingFollowRequestCount
     }
 
     var unreadNotificationCount: Int {

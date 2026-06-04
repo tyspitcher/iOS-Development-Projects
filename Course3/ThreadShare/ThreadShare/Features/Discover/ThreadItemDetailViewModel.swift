@@ -40,16 +40,6 @@ struct ThreadItemDetailViewModel {
         !isOwnedByCurrentUser && viewerRelationship == .friend && currentItem.availabilityStatus == .available
     }
 
-    var shouldShowConnectionActions: Bool {
-        guard !isOwnedByCurrentUser, owner != nil else { return false }
-        return true
-    }
-
-    var canBlockOwner: Bool {
-        guard let owner else { return false }
-        return appState.canBlockUser(owner.id)
-    }
-
     var canOwnerToggleAvailability: Bool {
         isOwnedByCurrentUser && [.available, .notAvailable].contains(currentItem.availabilityStatus)
     }
@@ -93,22 +83,6 @@ struct ThreadItemDetailViewModel {
 
     func toggleLike() {
         appState.toggleLike(for: currentItem.id)
-    }
-
-    func followOwnerIfNeeded() {
-        guard let owner, !owner.isFollowedByCurrentUser else { return }
-        appState.toggleFollow(for: owner.id)
-    }
-
-    func requestFriendIfNeeded() {
-        guard let owner, friendConnectionState == .addFriend else { return }
-        appState.requestFriend(for: owner.id)
-    }
-
-    @discardableResult
-    func blockOwner() -> Bool {
-        guard let owner else { return false }
-        return appState.blockUser(owner.id)
     }
 
     func canDeleteComment(_ comment: ThreadItemComment) -> Bool {

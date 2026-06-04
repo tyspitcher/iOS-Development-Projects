@@ -33,6 +33,7 @@ final class SupabaseRealtimeSyncService: ObservableObject {
         "notification_preferences",
         "return_reminders",
         "follows",
+        "follow_requests",
         "friend_requests",
         "user_blocks"
     ]
