@@ -1,24 +1,175 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="13122.16" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="BYZ-38-t0r">
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="24765" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="BYZ-38-t0r">
+    <device id="retina6_12" orientation="portrait" appearance="light"/>
     <dependencies>
-        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="13104.12"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="24743"/>
         <capability name="Safe area layout guides" minToolsVersion="9.0"/>
+        <capability name="System colors in document resources" minToolsVersion="11.0"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <scenes>
+        <!--Sneaky Cat View Controller-->
+        <scene sceneID="FJh-2c-zpC">
+            <objects>
+                <viewController id="ml8-0E-pA7" customClass="SneakyCatViewController" sceneMemberID="viewController">
+                    <view key="view" contentMode="scaleToFill" id="q3X-wk-piB">
+                        <rect key="frame" x="0.0" y="0.0" width="393" height="793"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" image="beanie" translatesAutoresizingMaskIntoConstraints="NO" id="m5O-wC-nkj" customClass="SneakyCatImage">
+                                <rect key="frame" x="46" y="59" width="301" height="400"/>
+                                <constraints>
+                                    <constraint firstAttribute="width" constant="301" id="HmW-WV-8An"/>
+                                    <constraint firstAttribute="height" constant="400" id="zdA-eL-GmC"/>
+                                </constraints>
+                            </imageView>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" misplaced="YES" text="Beanie" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="MZ4-o5-Xav">
+                                <rect key="frame" x="125" y="467" width="142" height="69"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="36"/>
+                                <nil key="textColor"/>
+                                <nil key="highlightedColor"/>
+                            </label>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="Label" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="YO4-IG-AqN">
+                                <rect key="frame" x="45.495710824220851" y="543.99999999999989" width="301" height="172"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                <nil key="textColor"/>
+                                <nil key="highlightedColor"/>
+                            </label>
+                        </subviews>
+                        <viewLayoutGuide key="safeArea" id="sHq-TB-vLh"/>
+                        <color key="backgroundColor" systemColor="systemBackgroundColor"/>
+                        <constraints>
+                            <constraint firstItem="m5O-wC-nkj" firstAttribute="top" secondItem="q3X-wk-piB" secondAttribute="top" constant="59" id="9yV-6u-xng"/>
+                            <constraint firstItem="m5O-wC-nkj" firstAttribute="centerX" secondItem="q3X-wk-piB" secondAttribute="centerX" id="IN0-Pg-eTx"/>
+                            <constraint firstItem="sHq-TB-vLh" firstAttribute="bottom" secondItem="MZ4-o5-Xav" secondAttribute="bottom" constant="223" id="RcT-rR-nrF"/>
+                            <constraint firstItem="MZ4-o5-Xav" firstAttribute="leading" secondItem="sHq-TB-vLh" secondAttribute="leading" constant="125" id="hJQ-WX-A0u"/>
+                            <constraint firstItem="MZ4-o5-Xav" firstAttribute="top" secondItem="m5O-wC-nkj" secondAttribute="bottom" constant="8" id="i6D-RQ-MGP"/>
+                            <constraint firstItem="MZ4-o5-Xav" firstAttribute="centerX" secondItem="m5O-wC-nkj" secondAttribute="centerX" id="jGV-cU-buW"/>
+                        </constraints>
+                    </view>
+                    <navigationItem key="navigationItem" id="fgo-dE-FLM"/>
+                    <connections>
+                        <outlet property="sneakyCatImage" destination="m5O-wC-nkj" id="CSZ-0X-yxN"/>
+                    </connections>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="L3w-b0-CJe" userLabel="First Responder" customClass="UIResponder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="135.1145038167939" y="836.61971830985919"/>
+        </scene>
         <!--View Controller-->
         <scene sceneID="tne-QT-ifu">
             <objects>
-                <viewController id="BYZ-38-t0r" customClass="ViewController" customModuleProvider="target" sceneMemberID="viewController">
+                <viewController id="BYZ-38-t0r" customClass="ViewController" customModule="UIKitPlayLab" customModuleProvider="target" sceneMemberID="viewController">
                     <view key="view" contentMode="scaleToFill" id="8bC-Xf-vdC">
-                        <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
+                        <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
-                        <color key="backgroundColor" xcode11CocoaTouchSystemColor="systemBackgroundColor" cocoaTouchSystemColor="whiteColor"/>
+                        <subviews>
+                            <button opaque="NO" contentMode="scaleToFill" misplaced="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="BwK-WH-WCw">
+                                <rect key="frame" x="90" y="394" width="212" height="64"/>
+                                <buttonConfiguration key="configuration" style="filled" title="Show Cool Dog"/>
+                                <connections>
+                                    <action selector="showCoolDogButton:" destination="BYZ-38-t0r" eventType="touchUpInside" id="DyZ-Fe-MzH"/>
+                                    <segue destination="t1P-lI-gSB" kind="show" identifier="ShowCoolDogSeque" id="U9g-Y2-SPF"/>
+                                </connections>
+                            </button>
+                            <button opaque="NO" contentMode="scaleToFill" misplaced="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="LER-hg-zcs">
+                                <rect key="frame" x="90" y="487" width="212" height="64"/>
+                                <state key="normal" title="Button"/>
+                                <buttonConfiguration key="configuration" style="filled" title="Show Sneaky Cat"/>
+                                <connections>
+                                    <action selector="ShowSneakyCatButton:" destination="BYZ-38-t0r" eventType="touchUpInside" id="VPh-Oj-e1Y"/>
+                                    <segue destination="ml8-0E-pA7" kind="show" identifier="ShowSneakyCatSegue" id="bPh-DM-aeK"/>
+                                </connections>
+                            </button>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" misplaced="YES" text="Do you want to see a cool dog or a sneaky cat?" textAlignment="center" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="KPt-2p-UnE">
+                                <rect key="frame" x="53" y="226" width="286" height="160"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" constant="160" id="fa2-Eo-FKv"/>
+                                </constraints>
+                                <fontDescription key="fontDescription" type="system" pointSize="33"/>
+                                <nil key="textColor"/>
+                                <nil key="highlightedColor"/>
+                            </label>
+                        </subviews>
                         <viewLayoutGuide key="safeArea" id="6Tk-OE-BBY"/>
+                        <color key="backgroundColor" systemColor="systemBackgroundColor"/>
+                        <constraints>
+                            <constraint firstItem="KPt-2p-UnE" firstAttribute="centerX" secondItem="BwK-WH-WCw" secondAttribute="centerX" id="5Yp-pw-tCC"/>
+                            <constraint firstItem="KPt-2p-UnE" firstAttribute="centerX" secondItem="8bC-Xf-vdC" secondAttribute="centerX" id="91h-MG-Hk7"/>
+                            <constraint firstItem="LER-hg-zcs" firstAttribute="top" secondItem="BwK-WH-WCw" secondAttribute="bottom" constant="29" id="NHB-gg-MXw"/>
+                            <constraint firstItem="KPt-2p-UnE" firstAttribute="leading" secondItem="6Tk-OE-BBY" secondAttribute="leading" constant="53" id="U9r-Ig-bmP"/>
+                            <constraint firstItem="KPt-2p-UnE" firstAttribute="centerX" secondItem="LER-hg-zcs" secondAttribute="centerX" id="Vyw-EK-gj7"/>
+                            <constraint firstItem="KPt-2p-UnE" firstAttribute="top" secondItem="6Tk-OE-BBY" secondAttribute="top" constant="95" id="ifk-OX-y80"/>
+                            <constraint firstItem="BwK-WH-WCw" firstAttribute="top" secondItem="KPt-2p-UnE" secondAttribute="bottom" constant="99" id="yqW-Y0-3Jy"/>
+                        </constraints>
                     </view>
+                    <connections>
+                        <outlet property="MainViewTitle" destination="KPt-2p-UnE" id="DGw-0K-lcE"/>
+                    </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="dkx-z0-nzr" sceneMemberID="firstResponder"/>
             </objects>
+            <point key="canvasLocation" x="138.1679389312977" y="130.98591549295776"/>
+        </scene>
+        <!--Cool Dog View Controller-->
+        <scene sceneID="vgc-Em-UOh">
+            <objects>
+                <viewController id="t1P-lI-gSB" customClass="CoolDogViewController" sceneMemberID="viewController">
+                    <view key="view" contentMode="scaleToFill" id="Vls-9U-5SJ">
+                        <rect key="frame" x="0.0" y="0.0" width="393" height="793"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" image="millie" translatesAutoresizingMaskIntoConstraints="NO" id="W9f-sj-sdG" customClass="CoolDogImage">
+                                <rect key="frame" x="-3.6666666666666572" y="59" width="400.33333333333326" height="400"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" constant="400" id="8f5-Oe-rRC"/>
+                                    <constraint firstAttribute="width" constant="400" id="t3U-cq-qtw"/>
+                                </constraints>
+                            </imageView>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" misplaced="YES" text="Millie" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="XeU-aP-QZv">
+                                <rect key="frame" x="98" y="476" width="197" height="44"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="36"/>
+                                <nil key="textColor"/>
+                                <nil key="highlightedColor"/>
+                            </label>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" misplaced="YES" text="Label" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="XVY-Dy-X7S">
+                                <rect key="frame" x="51.7342585351048" y="528" width="287" height="178.99999999999989"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                <nil key="textColor"/>
+                                <nil key="highlightedColor"/>
+                            </label>
+                        </subviews>
+                        <viewLayoutGuide key="safeArea" id="s6o-nn-Slj"/>
+                        <color key="backgroundColor" systemColor="systemBackgroundColor"/>
+                        <constraints>
+                            <constraint firstItem="W9f-sj-sdG" firstAttribute="centerX" secondItem="Vls-9U-5SJ" secondAttribute="centerX" id="57u-sa-7gH"/>
+                            <constraint firstItem="XeU-aP-QZv" firstAttribute="top" secondItem="W9f-sj-sdG" secondAttribute="bottom" constant="17" id="AUH-C6-yUI"/>
+                            <constraint firstItem="XVY-Dy-X7S" firstAttribute="top" secondItem="XeU-aP-QZv" secondAttribute="bottom" constant="8" id="CbD-Zx-4Vi"/>
+                            <constraint firstItem="XVY-Dy-X7S" firstAttribute="leading" secondItem="s6o-nn-Slj" secondAttribute="leading" constant="53" id="Ehu-5w-qet"/>
+                            <constraint firstItem="XeU-aP-QZv" firstAttribute="centerX" secondItem="W9f-sj-sdG" secondAttribute="centerX" id="IkH-dZ-3Nl"/>
+                            <constraint firstItem="W9f-sj-sdG" firstAttribute="top" secondItem="Vls-9U-5SJ" secondAttribute="top" constant="59" id="V9Z-qc-eqg"/>
+                            <constraint firstItem="s6o-nn-Slj" firstAttribute="bottom" secondItem="XeU-aP-QZv" secondAttribute="bottom" constant="239" id="fDv-IV-gkx"/>
+                            <constraint firstItem="s6o-nn-Slj" firstAttribute="bottom" secondItem="XVY-Dy-X7S" secondAttribute="bottom" constant="52" id="kov-gc-0Go"/>
+                            <constraint firstItem="XVY-Dy-X7S" firstAttribute="centerX" secondItem="XeU-aP-QZv" secondAttribute="centerX" id="xBJ-BZ-5zj"/>
+                            <constraint firstItem="XeU-aP-QZv" firstAttribute="leading" secondItem="s6o-nn-Slj" secondAttribute="leading" constant="98" id="xhq-xh-YcC"/>
+                        </constraints>
+                    </view>
+                    <navigationItem key="navigationItem" id="M5Q-CY-15g"/>
+                    <connections>
+                        <outlet property="coolDogImage" destination="W9f-sj-sdG" id="Oia-Qz-YfJ"/>
+                    </connections>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="kn6-Um-RJB" userLabel="First Responder" customClass="UIResponder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="829.7709923664122" y="130.98591549295776"/>
         </scene>
     </scenes>
+    <resources>
+        <image name="beanie" width="3024" height="4032"/>
+        <image name="millie" width="1024" height="1536"/>
+        <systemColor name="systemBackgroundColor">
+            <color white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+        </systemColor>
+    </resources>
 </document>
