@@ -7,6 +7,20 @@
 
 import Foundation
 
+enum SupabaseAccountCreationError: LocalizedError {
+    case emailAlreadyRegistered
+    case usernameAlreadyExists
+
+    var errorDescription: String? {
+        switch self {
+        case .emailAlreadyRegistered:
+            return "This email already has an account. Sign in with the password from your first attempt, or contact support if you cannot sign in."
+        case .usernameAlreadyExists:
+            return "That username is already taken. Please choose another one."
+        }
+    }
+}
+
 final class SupabaseAuthService {
     private let client: SupabaseHTTPClient
 
@@ -96,13 +110,88 @@ final class SupabaseAuthService {
 
         let bootstrapClient = SupabaseHTTPClient(sessionProvider: StaticSessionProvider(session: session))
         let data = try JSONEncoder.threadShareSupabase.encode(row)
-        try await bootstrapClient.requestVoid(
+        do {
+            try await bootstrapClient.requestVoid(
+                path: "/rest/v1/profiles",
+                method: .post,
+                queryItems: [URLQueryItem(name: "on_conflict", value: "id")],
+                body: data,
+                useAuth: true,
+                additionalHeaders: ["Prefer": "resolution=merge-duplicates,return=representation"]
+            )
+        } catch {
+            if isUsernameConflict(error) {
+                throw SupabaseAccountCreationError.usernameAlreadyExists
+            }
+            if isEmailConflict(error) {
+                throw SupabaseAccountCreationError.emailAlreadyRegistered
+            }
+            throw error
+        }
+    }
+
+    func profileExists(userID: UUID, session: SupabaseSession) async throws -> Bool {
+        struct ProfileIDRow: Decodable {
+            let id: UUID
+        }
+
+        let bootstrapClient = SupabaseHTTPClient(sessionProvider: StaticSessionProvider(session: session))
+        let rows: [ProfileIDRow] = try await bootstrapClient.request(
             path: "/rest/v1/profiles",
-            method: .post,
-            queryItems: [URLQueryItem(name: "on_conflict", value: "id")],
-            body: data,
+            method: .get,
+            queryItems: [
+                URLQueryItem(name: "id", value: "eq.\(userID.uuidString.lowercased())"),
+                URLQueryItem(name: "select", value: "id"),
+                URLQueryItem(name: "limit", value: "1")
+            ],
             useAuth: true
         )
+        return rows.isEmpty == false
+    }
+
+    func isAlreadyRegistered(_ error: Error) -> Bool {
+        if let clientError = error as? SupabaseHTTPClientError {
+            switch clientError.responseCode?.lowercased() {
+            case "user_already_exists", "email_exists":
+                return true
+            default:
+                break
+            }
+        }
+
+        let message = backendMessage(for: error)
+        return message.localizedCaseInsensitiveContains("user_already_exists")
+            || message.localizedCaseInsensitiveContains("user already exists")
+            || message.localizedCaseInsensitiveContains("user already registered")
+            || message.localizedCaseInsensitiveContains("email already registered")
+            || message.localizedCaseInsensitiveContains("email_exists")
+    }
+
+    private func isUsernameConflict(_ error: Error) -> Bool {
+        let message = backendMessage(for: error)
+        return message.localizedCaseInsensitiveContains("profiles_username_key")
+            || (
+                message.localizedCaseInsensitiveContains("duplicate key")
+                && message.localizedCaseInsensitiveContains("username")
+            )
+    }
+
+    private func isEmailConflict(_ error: Error) -> Bool {
+        let message = backendMessage(for: error)
+        return message.localizedCaseInsensitiveContains("profiles_email_key")
+            || (
+                message.localizedCaseInsensitiveContains("duplicate key")
+                && message.localizedCaseInsensitiveContains("email")
+            )
+    }
+
+    private func backendMessage(for error: Error) -> String {
+        if let clientError = error as? SupabaseHTTPClientError,
+           let responseMessage = clientError.responseMessage
+        {
+            return responseMessage
+        }
+        return (error as NSError).localizedDescription
     }
 
     private func makeSession(from response: SupabaseAuthSessionResponse) -> SupabaseSession {

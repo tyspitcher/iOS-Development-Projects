@@ -123,16 +123,14 @@ struct ProfileView: View {
     }
 
     private var topHeader: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("ThreadShare")
-                .font(AppTheme.brandFont(size: 40))
-                .foregroundStyle(AppTheme.ink)
+        VStack(alignment: .leading, spacing: AppTheme.compactSpacing) {
+            ThreadShareLogoText()
 
             Text("Profile")
-                .font(AppTheme.titleFont(size: 26))
+                .font(AppTheme.titleFont(size: 32))
                 .foregroundStyle(AppTheme.ink)
         }
-        .padding(.trailing, 88)
+        .padding(.trailing, 120)
     }
 
     private var topActionButtons: some View {

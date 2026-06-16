@@ -15,7 +15,9 @@ class SneakyCatViewController: UIViewController {
         // Do any additional setup after loading the view.
     }
     
-
+    @IBOutlet weak var sneakyCatImage: UIImageView!
+    
+    @IBOutlet weak var sneakyCatName: UILabel!
     /*
     // MARK: - Navigation
 

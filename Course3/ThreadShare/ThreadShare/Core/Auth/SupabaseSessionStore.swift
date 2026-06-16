@@ -76,7 +76,29 @@ final class SupabaseSessionStore: ObservableObject, SupabaseSessionProviding {
         avatarImageData: Data?,
         avatarFallbackColorHex: String?
     ) async throws {
-        let session = try await authService.signUp(email: email, password: password)
+        let normalizedEmail = email
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        let session: SupabaseSession
+
+        do {
+            session = try await authService.signUp(email: normalizedEmail, password: password)
+        } catch {
+            guard authService.isAlreadyRegistered(error) else { throw error }
+
+            // A previous attempt may have created Auth before profile setup failed.
+            do {
+                let existingSession = try await authService.signIn(email: normalizedEmail, password: password)
+                guard try await authService.profileExists(userID: existingSession.userID, session: existingSession) == false else {
+                    throw SupabaseAccountCreationError.emailAlreadyRegistered
+                }
+                session = existingSession
+            } catch let accountError as SupabaseAccountCreationError {
+                throw accountError
+            } catch {
+                throw SupabaseAccountCreationError.emailAlreadyRegistered
+            }
+        }
 
         let storageService = SupabaseStorageService(sessionProvider: StaticSessionProvider(session: session))
         let initials = AvatarDescriptor.initials(for: displayName, username: username)
@@ -114,7 +136,7 @@ final class SupabaseSessionStore: ObservableObject, SupabaseSessionProviding {
                 colorPalettePreferenceIDs: preferenceSelection.colorPaletteIDs,
                 isFollowedByCurrentUser: false
             ),
-            email: email,
+            email: normalizedEmail,
             session: session
         )
 
@@ -123,7 +145,7 @@ final class SupabaseSessionStore: ObservableObject, SupabaseSessionProviding {
         await markLoginActivity(for: session)
         pendingOnboardingDraft = OnboardingQuestionnaireDraft(
             userID: session.userID,
-            email: email,
+            email: normalizedEmail,
             preferredStyleIDs: preferenceSelection.styleIDs,
             favoriteBrands: preferenceSelection.favoriteBrands,
             preferredColorPaletteIDs: preferenceSelection.colorPaletteIDs

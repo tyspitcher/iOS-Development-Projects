@@ -96,13 +96,10 @@ struct DiscoverView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: AppTheme.compactSpacing) {
-            Text("Discover")
-                .font(AppTheme.titleFont(size: 30))
-                .foregroundStyle(AppTheme.ink)
-                .padding(.top, AppTheme.xSmallSpacing)
+            ThreadShareLogoText()
 
-            Text("ThreadShare")
-                .font(AppTheme.brandFont(size: 42))
+            Text("Discover")
+                .font(AppTheme.titleFont(size: 32))
                 .foregroundStyle(AppTheme.ink)
 
             Text("DISCOVER THE FIT. BORROW THE LOOK. WEAR THE STORY.")

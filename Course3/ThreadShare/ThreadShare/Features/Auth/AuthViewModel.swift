@@ -167,6 +167,10 @@ final class AuthViewModel: ObservableObject {
             return "Unable to sign in right now. Please try again."
         }
 
-        return message.isEmpty ? "Something went wrong while creating your account. Please try again." : message
+        if error is SupabaseAccountCreationError {
+            return message
+        }
+
+        return "We couldn't finish creating your account. Please try again. If this keeps happening, contact support."
     }
 }

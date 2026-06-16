@@ -29,13 +29,6 @@
                                 <nil key="textColor"/>
                                 <nil key="highlightedColor"/>
                             </label>
-                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="Label" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="YO4-IG-AqN">
-                                <rect key="frame" x="45.495710824220851" y="543.99999999999989" width="301" height="172"/>
-                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
-                                <fontDescription key="fontDescription" type="system" pointSize="17"/>
-                                <nil key="textColor"/>
-                                <nil key="highlightedColor"/>
-                            </label>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="sHq-TB-vLh"/>
                         <color key="backgroundColor" systemColor="systemBackgroundColor"/>
@@ -50,7 +43,8 @@
                     </view>
                     <navigationItem key="navigationItem" id="fgo-dE-FLM"/>
                     <connections>
-                        <outlet property="sneakyCatImage" destination="m5O-wC-nkj" id="CSZ-0X-yxN"/>
+                        <outlet property="sneakyCatImage" destination="m5O-wC-nkj" id="KRo-8x-fOj"/>
+                        <outlet property="sneakyCatName" destination="MZ4-o5-Xav" id="3hM-eU-t2h"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="L3w-b0-CJe" userLabel="First Responder" customClass="UIResponder" sceneMemberID="firstResponder"/>
@@ -70,7 +64,7 @@
                                 <buttonConfiguration key="configuration" style="filled" title="Show Cool Dog"/>
                                 <connections>
                                     <action selector="showCoolDogButton:" destination="BYZ-38-t0r" eventType="touchUpInside" id="DyZ-Fe-MzH"/>
-                                    <segue destination="t1P-lI-gSB" kind="show" identifier="ShowCoolDogSeque" id="U9g-Y2-SPF"/>
+                                    <segue destination="t1P-lI-gSB" kind="show" identifier="ShowCoolDogSeque" destinationCreationSelector="navigateToCoolDogView:" id="U9g-Y2-SPF"/>
                                 </connections>
                             </button>
                             <button opaque="NO" contentMode="scaleToFill" misplaced="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="LER-hg-zcs">
@@ -79,7 +73,7 @@
                                 <buttonConfiguration key="configuration" style="filled" title="Show Sneaky Cat"/>
                                 <connections>
                                     <action selector="ShowSneakyCatButton:" destination="BYZ-38-t0r" eventType="touchUpInside" id="VPh-Oj-e1Y"/>
-                                    <segue destination="ml8-0E-pA7" kind="show" identifier="ShowSneakyCatSegue" id="bPh-DM-aeK"/>
+                                    <segue destination="ml8-0E-pA7" kind="show" identifier="ShowSneakyCatSegue" destinationCreationSelector="navigateToSneakyCatView:" id="bPh-DM-aeK"/>
                                 </connections>
                             </button>
                             <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" misplaced="YES" text="Do you want to see a cool dog or a sneaky cat?" textAlignment="center" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="KPt-2p-UnE">
@@ -133,31 +127,22 @@
                                 <nil key="textColor"/>
                                 <nil key="highlightedColor"/>
                             </label>
-                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" misplaced="YES" text="Label" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="XVY-Dy-X7S">
-                                <rect key="frame" x="51.7342585351048" y="528" width="287" height="178.99999999999989"/>
-                                <fontDescription key="fontDescription" type="system" pointSize="17"/>
-                                <nil key="textColor"/>
-                                <nil key="highlightedColor"/>
-                            </label>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="s6o-nn-Slj"/>
                         <color key="backgroundColor" systemColor="systemBackgroundColor"/>
                         <constraints>
                             <constraint firstItem="W9f-sj-sdG" firstAttribute="centerX" secondItem="Vls-9U-5SJ" secondAttribute="centerX" id="57u-sa-7gH"/>
                             <constraint firstItem="XeU-aP-QZv" firstAttribute="top" secondItem="W9f-sj-sdG" secondAttribute="bottom" constant="17" id="AUH-C6-yUI"/>
-                            <constraint firstItem="XVY-Dy-X7S" firstAttribute="top" secondItem="XeU-aP-QZv" secondAttribute="bottom" constant="8" id="CbD-Zx-4Vi"/>
-                            <constraint firstItem="XVY-Dy-X7S" firstAttribute="leading" secondItem="s6o-nn-Slj" secondAttribute="leading" constant="53" id="Ehu-5w-qet"/>
                             <constraint firstItem="XeU-aP-QZv" firstAttribute="centerX" secondItem="W9f-sj-sdG" secondAttribute="centerX" id="IkH-dZ-3Nl"/>
                             <constraint firstItem="W9f-sj-sdG" firstAttribute="top" secondItem="Vls-9U-5SJ" secondAttribute="top" constant="59" id="V9Z-qc-eqg"/>
                             <constraint firstItem="s6o-nn-Slj" firstAttribute="bottom" secondItem="XeU-aP-QZv" secondAttribute="bottom" constant="239" id="fDv-IV-gkx"/>
-                            <constraint firstItem="s6o-nn-Slj" firstAttribute="bottom" secondItem="XVY-Dy-X7S" secondAttribute="bottom" constant="52" id="kov-gc-0Go"/>
-                            <constraint firstItem="XVY-Dy-X7S" firstAttribute="centerX" secondItem="XeU-aP-QZv" secondAttribute="centerX" id="xBJ-BZ-5zj"/>
                             <constraint firstItem="XeU-aP-QZv" firstAttribute="leading" secondItem="s6o-nn-Slj" secondAttribute="leading" constant="98" id="xhq-xh-YcC"/>
                         </constraints>
                     </view>
                     <navigationItem key="navigationItem" id="M5Q-CY-15g"/>
                     <connections>
-                        <outlet property="coolDogImage" destination="W9f-sj-sdG" id="Oia-Qz-YfJ"/>
+                        <outlet property="coolDogImage" destination="W9f-sj-sdG" id="iuQ-vH-HD8"/>
+                        <outlet property="coolDogName" destination="XeU-aP-QZv" id="9ls-Qm-Pyo"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="kn6-Um-RJB" userLabel="First Responder" customClass="UIResponder" sceneMemberID="firstResponder"/>

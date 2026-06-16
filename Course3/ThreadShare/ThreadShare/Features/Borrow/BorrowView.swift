@@ -75,12 +75,10 @@ struct BorrowView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: AppTheme.compactSpacing) {
-            Text("ThreadShare")
-                .font(AppTheme.brandFont(size: 40))
-                .foregroundStyle(AppTheme.ink)
+            ThreadShareLogoText()
 
             Text("Borrow Board")
-                .font(AppTheme.titleFont(size: 26))
+                .font(AppTheme.titleFont(size: 32))
                 .foregroundStyle(AppTheme.ink)
 
             Text("Track requests, returns, and lending plans in one clean place.")

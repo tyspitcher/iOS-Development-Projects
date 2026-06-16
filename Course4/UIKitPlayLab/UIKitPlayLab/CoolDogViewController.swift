@@ -14,8 +14,10 @@ class CoolDogViewController: UIViewController {
 
         // Do any additional setup after loading the view.
     }
+    @IBOutlet weak var coolDogImage: UIImageView!
     
-
+    @IBOutlet weak var coolDogName: UILabel!
+    
     /*
     // MARK: - Navigation
 

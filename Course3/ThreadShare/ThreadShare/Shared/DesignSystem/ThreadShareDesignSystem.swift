@@ -8,21 +8,24 @@
 import SwiftUI
 
 struct ThreadShareLogoText: View {
-    var body: some View {
-        HStack(spacing: AppTheme.tightSpacing) {
-            ZStack {
-                Circle()
-                    .fill(AppTheme.accentSoft)
+    var markSize: CGFloat = 21
+    var wordmarkSize: CGFloat = 21
+    var spacing: CGFloat = 6
 
-                Image(systemName: "hanger")
-                    .font(AppTheme.captionFont(size: 15, weight: .bold))
-                    .foregroundStyle(AppTheme.accent)
-            }
-            .frame(width: 32, height: 32)
+    var body: some View {
+        HStack(spacing: spacing) {
+            Image("ThreadShareLogoWithBackground")
+                .resizable()
+                .renderingMode(.original)
+                .scaledToFit()
+                .frame(width: markSize, height: markSize)
+                .shadow(color: AppTheme.softShadow, radius: 8, x: 0, y: 5)
 
             Text("ThreadShare")
-                .font(AppTheme.brandFont(size: 34))
+                .font(AppTheme.brandFont(size: wordmarkSize))
                 .foregroundStyle(AppTheme.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("ThreadShare")

@@ -13,6 +13,19 @@ enum SupabaseHTTPClientError: Error {
     case badStatusCode(Int, Data)
 }
 
+extension SupabaseHTTPClientError {
+    var responseMessage: String? {
+        guard case let .badStatusCode(_, data) = self else { return nil }
+        return String(data: data, encoding: .utf8)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    var responseCode: String? {
+        guard case let .badStatusCode(_, data) = self else { return nil }
+        return (try? JSONDecoder().decode(SupabaseErrorResponse.self, from: data))?.code
+    }
+}
+
 extension SupabaseHTTPClientError: LocalizedError {
     var errorDescription: String? {
         switch self {
@@ -20,15 +33,17 @@ extension SupabaseHTTPClientError: LocalizedError {
             return "The Supabase request URL was invalid."
         case .invalidResponse:
             return "Supabase returned an invalid response."
-        case let .badStatusCode(statusCode, data):
-            let responseMessage = String(data: data, encoding: .utf8)?
-                .trimmingCharacters(in: .whitespacesAndNewlines)
+        case let .badStatusCode(statusCode, _):
             if let responseMessage, responseMessage.isEmpty == false {
                 return "Supabase returned \(statusCode): \(responseMessage)"
             }
             return "Supabase returned \(statusCode)."
         }
     }
+}
+
+private struct SupabaseErrorResponse: Decodable {
+    let code: String?
 }
 
 final class SupabaseHTTPClient {

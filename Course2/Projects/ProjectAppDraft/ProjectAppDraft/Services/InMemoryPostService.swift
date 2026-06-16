@@ -25,10 +25,12 @@ class InMemoryPostService: PostService {
     func fetchTimeline() async throws -> [Post] {
         posts
     }
+    
     // fetchPosts unused now, but will be ready for API
     func fetchPosts(for authorID: UUID) async throws -> [Post] {
         posts.filter { $0.authorID == authorID }
     }
+    
     func createPost(_ post: Post) async throws -> Post {
         posts.insert(post, at: 0)
         return post
@@ -38,10 +40,12 @@ class InMemoryPostService: PostService {
     func fetchComments(for postID: UUID) async throws -> [Comment] {
         commentsByPost[postID] ?? []
     }
+    
     func addComment(_ comment: Comment) async throws -> Comment {
         commentsByPost[comment.postID, default: []].append(comment)
         return comment
     }
+    
     func commentCount(for postID: UUID) async throws -> Int {
         commentsByPost[postID]?.count ?? 0
     }
@@ -50,9 +54,11 @@ class InMemoryPostService: PostService {
     func likeCount(for postID: UUID) async throws -> Int {
         likesByPost[postID]?.count ?? 0
     }
+    
     func isLiked(postID: UUID, by userID: UUID) async throws -> Bool {
         likesByPost[postID]?.contains(userID) ?? false
     }
+    
     func toggleLike(postID: UUID, by userID: UUID) async throws -> (isLiked: Bool, likeCount: Int) {
         var set = likesByPost[postID] ?? []
         if set.contains(userID) {

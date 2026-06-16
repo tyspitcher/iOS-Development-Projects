@@ -1,0 +1,45 @@
+{
+  "fill" : {
+    "automatic-gradient" : "srgb:0.11765,0.16078,0.21961,1.00000",
+    "orientation" : {
+      "start" : {
+        "x" : 0.5,
+        "y" : 0
+      },
+      "stop" : {
+        "x" : 0.5,
+        "y" : 0.7
+      }
+    }
+  },
+  "groups" : [
+    {
+      "blur-material" : null,
+      "layers" : [
+        {
+          "image-name" : "Untitled - June 4, 2026 17.49.33.png",
+          "name" : "Untitled - June 4, 2026 17.49.33",
+          "position" : {
+            "scale" : 0.45,
+            "translation-in-points" : [
+              0,
+              1.349999999999909
+            ]
+          }
+        }
+      ],
+      "lighting" : "individual",
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "squares" : "shared"
+  }
+}
